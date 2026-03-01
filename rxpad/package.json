@@ -1,0 +1,31 @@
+{
+  "name": "rxpad",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.34",
+    "ai": "^6.0.105",
+    "idb": "^8.0.3",
+    "jspdf": "^4.2.0",
+    "preact": "^10.27.2",
+    "preact-router": "^4.1.2",
+    "qrcode": "^1.5.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/node": "^24.10.1",
+    "@types/qrcode": "^1.5.6",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
