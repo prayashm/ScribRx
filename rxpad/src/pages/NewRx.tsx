@@ -44,7 +44,8 @@ export function NewRx({ editDraft }: Props) {
   // Notes
   const [notes, setNotes] = useState('');
 
-  // AI text input
+  // AI state
+  const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
   const [textInput, setTextInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -110,7 +111,7 @@ export function NewRx({ editDraft }: Props) {
     if (draft.notes) setNotes(draft.notes);
   }
 
-  async function handleVoiceResult(audio: { base64: string; mimeType: string }) {
+  async function handleVoiceTranscript(transcript: string) {
     if (!apiKey) {
       setAiError('API key not configured. Go to Settings.');
       return;
@@ -123,13 +124,13 @@ export function NewRx({ editDraft }: Props) {
     setAiError('');
     try {
       const result = await parsePrescriptionUpdate(apiKey, getCurrentDraft(), {
-        type: 'audio',
-        data: audio.base64,
-        mimeType: audio.mimeType,
+        type: 'text',
+        text: transcript,
       });
       applyDraft(result);
     } catch (err: any) {
-      setAiError(err?.message?.includes('401') ? 'API key invalid. Check Settings.' : 'Failed to parse voice. Please try again or enter manually.');
+      console.error('Voice parse error:', err);
+      setAiError(err?.message?.includes('401') ? 'API key invalid. Check Settings.' : `Voice parse failed: ${err?.message || 'Unknown error'}`);
     } finally {
       setAiLoading(false);
     }
@@ -270,6 +271,7 @@ export function NewRx({ editDraft }: Props) {
     setNotes('');
     setTextInput('');
     setAiError('');
+    setFollowUpQuestions([]);
     setFinalized(null);
   }
 
@@ -318,7 +320,7 @@ export function NewRx({ editDraft }: Props) {
         {/* AI Input Section */}
         <section class="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-100">
           <p class="text-xs text-blue-700 font-medium mb-2">Voice or Text Input (AI-powered)</p>
-          <VoiceRecorder onResult={handleVoiceResult} disabled={aiLoading || !apiKey} />
+          <VoiceRecorder onTranscript={handleVoiceTranscript} disabled={aiLoading || !apiKey} />
           <div class="flex gap-2 mt-2">
             <input
               class="flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -344,6 +346,20 @@ export function NewRx({ editDraft }: Props) {
           )}
           {!apiKey && (
             <p class="text-xs text-amber-600 mt-2">API key not set. Configure in Settings to use AI features.</p>
+          )}
+          {followUpQuestions.length > 0 && (
+            <div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p class="text-xs font-medium text-amber-800 mb-1.5">Missing info — please clarify:</p>
+              <ul class="space-y-1">
+                {followUpQuestions.map((q, i) => (
+                  <li key={i} class="text-xs text-amber-700 flex gap-1.5">
+                    <span class="shrink-0">•</span>
+                    <span>{q}</span>
+                  </li>
+                ))}
+              </ul>
+              <p class="text-xs text-amber-600 mt-2 italic">Use voice or text above to answer, or fill the form directly.</p>
+            </div>
           )}
         </section>
 

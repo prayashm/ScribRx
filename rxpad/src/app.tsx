@@ -63,7 +63,7 @@ export function App() {
   }
 
   if (needsOnboarding && window.location.pathname !== '/verify') {
-    return <Onboarding />;
+    return <Onboarding onComplete={() => setNeedsOnboarding(false)} />;
   }
 
   return (

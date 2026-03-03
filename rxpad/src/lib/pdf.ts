@@ -63,7 +63,7 @@ export async function generatePrescriptionPDF(
   // ── Rx Symbol ──
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('\u211E', margin, y); // ℞
+  doc.text('Rx', margin, y);
   y += 4;
 
   // ── Medicines Table ──
@@ -139,21 +139,19 @@ export async function generatePrescriptionPDF(
   // ── Footer ──
   const footerY = 195;
 
-  // Stamp bottom-left
-  if (profile.stampBase64) {
-    doc.addImage(profile.stampBase64, 'PNG', margin, footerY - 18, 20, 20);
-  }
-
-  // QR bottom-right
+  // QR bottom-left
   if (qrDataUrl) {
-    doc.addImage(qrDataUrl, 'PNG', pageW - margin - 20, footerY - 18, 20, 20);
+    doc.addImage(qrDataUrl, 'PNG', margin, footerY - 18, 18, 18);
   }
 
-  // Signature line bottom-center-right
+  // Signature + stamp bottom-right
+  const sigX = pageW - margin - 42;
+  if (profile.stampBase64) {
+    doc.addImage(profile.stampBase64, 'PNG', sigX, footerY - 22, 20, 20);
+  }
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  const sigX = pageW - margin - 40;
-  doc.line(sigX, footerY, sigX + 38, footerY);
+  doc.line(sigX, footerY, sigX + 40, footerY);
   doc.text(`Dr. ${profile.fullName}`, sigX + 2, footerY + 4);
 
   return doc.output('blob');

@@ -18,7 +18,10 @@ Rules:
 - "x/7" notation: "3/7" means "3 days", "5/7" means "5 days", "2/52" means "2 weeks"
 - If the doctor says "Tab" assume tablet, "Cap" assume capsule, "Syp" assume syrup, "Inj" assume injection
 - Preserve ALL existing prescription data unless the doctor explicitly changes it
-- If something is ambiguous, keep it as the doctor said — do not guess dosages`;
+- NEVER guess or invent information the doctor didn't say. Leave fields empty if not mentioned.
+- Partial prescriptions are fine — fill only what was said.
+- In follow_up_questions, ask about critical missing info (dosage, frequency, duration for medicines; patient name). Keep questions short and specific. Don't ask about optional fields like instructions unless clinically important.
+- If the doctor's message answers a previous question, merge the answer into the existing data.`;
 
 export async function parsePrescriptionUpdate(
   apiKey: string,
@@ -45,7 +48,7 @@ export async function parsePrescriptionUpdate(
     userContent.push({
       type: 'file',
       data: input.data,
-      mimeType: input.mimeType,
+      mediaType: input.mimeType,
     });
   } else {
     userContent.push({

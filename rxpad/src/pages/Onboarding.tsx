@@ -217,7 +217,7 @@ export function Onboarding({ path: _path }: { path?: string }) {
             <h2 class="text-2xl font-bold text-gray-900 mb-2">You're all set!</h2>
             <p class="text-gray-600 mb-8">Start creating prescriptions with voice or text.</p>
             <button
-              onClick={() => route('/')}
+              onClick={() => { if (onComplete) onComplete(); route('/'); }}
               class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-base"
             >
               Create First Prescription
