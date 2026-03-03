@@ -33,7 +33,7 @@ export async function signPrescription(
     doctorName: profile.fullName,
     regNo: profile.regNumber,
     date: rx.finalizedAt || rx.createdAt,
-    patientInitials: getInitials(rx.patient.name),
+    patientInitials: getInitials(rx.patient.name || ''),
     status: rx.status,
   };
 

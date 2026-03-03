@@ -7,7 +7,7 @@ import { testApiKey } from '../lib/gemini';
 import { StampPreview } from '../components/StampPreview';
 import type { DoctorProfile } from '../schemas/profile';
 
-export function Onboarding({ path: _path }: { path?: string }) {
+export function Onboarding({ path: _path, onComplete }: { path?: string; onComplete?: () => void }) {
   const [step, setStep] = useState(0);
 
   // API key state

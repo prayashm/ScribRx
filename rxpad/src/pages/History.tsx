@@ -63,7 +63,7 @@ export function History({ path: _path }: { path?: string }) {
   }
 
   const filtered = prescriptions.filter((rx) =>
-    rx.patient.name.toLowerCase().includes(search.toLowerCase())
+    rx.patient.name || 'Unknown'.toLowerCase().includes(search.toLowerCase())
   );
 
   if (selected) {

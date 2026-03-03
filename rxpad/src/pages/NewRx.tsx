@@ -79,9 +79,9 @@ export function NewRx({ editDraft }: Props) {
   // Load edit draft
   useEffect(() => {
     if (editDraft) {
-      setPatientName(editDraft.patient.name);
-      setPatientAge(String(editDraft.patient.age));
-      setPatientGender(editDraft.patient.gender);
+      if (editDraft.patient.name) setPatientName(editDraft.patient.name);
+      if (editDraft.patient.age) setPatientAge(String(editDraft.patient.age));
+      if (editDraft.patient.gender) setPatientGender(editDraft.patient.gender);
       setMedicines(editDraft.medicines);
       setLabTests(editDraft.labTests);
       setNotes(editDraft.notes || '');
@@ -99,16 +99,18 @@ export function NewRx({ editDraft }: Props) {
       medicines: medicines.filter((m) => m.name),
       lab_tests: labTests,
       notes: notes || undefined,
+      follow_up_questions: [],
     };
   }
 
   function applyDraft(draft: PrescriptionDraft) {
-    setPatientName(draft.patient.name);
-    setPatientAge(String(draft.patient.age));
-    setPatientGender(draft.patient.gender);
-    setMedicines(draft.medicines.length > 0 ? draft.medicines : [emptyMedicine()]);
-    setLabTests(draft.lab_tests || []);
+    if (draft.patient?.name) setPatientName(draft.patient.name);
+    if (draft.patient?.age != null) setPatientAge(String(draft.patient.age));
+    if (draft.patient?.gender) setPatientGender(draft.patient.gender);
+    if (draft.medicines && draft.medicines.length > 0) setMedicines(draft.medicines);
+    if (draft.lab_tests && draft.lab_tests.length > 0) setLabTests(draft.lab_tests);
     if (draft.notes) setNotes(draft.notes);
+    setFollowUpQuestions(draft.follow_up_questions || []);
   }
 
   async function handleVoiceTranscript(transcript: string) {

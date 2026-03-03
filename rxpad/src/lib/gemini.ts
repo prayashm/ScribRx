@@ -30,7 +30,7 @@ export async function parsePrescriptionUpdate(
 ): Promise<PrescriptionDraft> {
   const model = getGeminiModel(apiKey);
 
-  const userContent: Array<{ type: string; text?: string; data?: string; mimeType?: string }> = [];
+  const userContent: Array<{ type: string; text?: string; data?: string; mimeType?: string; mediaType?: string }> = [];
 
   if (currentState) {
     userContent.push({
