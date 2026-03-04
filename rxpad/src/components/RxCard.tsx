@@ -76,7 +76,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
           <button
             onClick={onFinalize}
             disabled={finalizing}
-            class="w-full bg-green-600 text-white py-2.5 rounded-lg font-medium text-sm disabled:bg-gray-300"
+            style="background: #1e3a5f" class="w-full text-white py-2.5 rounded-lg font-medium text-sm disabled:bg-gray-300"
           >
             {finalizing ? 'Generating...' : '✅ Finalize & Share'}
           </button>

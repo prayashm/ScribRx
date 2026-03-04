@@ -237,9 +237,9 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     return (
       <div class="flex flex-col h-screen max-w-lg mx-auto bg-gray-50">
         {/* Header */}
-        <div class="flex items-center justify-between px-4 py-2.5 bg-green-700 text-white">
+        <div class="flex items-center justify-between px-4 py-2.5 text-white" style="background: #1e3a5f;">
           <h1 class="text-base font-semibold">✅ Prescription Sent</h1>
-          <button onClick={() => route('/history')} class="p-2 rounded-full hover:bg-green-600" title="History">
+          <button onClick={() => route('/history')} class="p-2 rounded-full hover:bg-white/10" title="History">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
           </button>
         </div>
@@ -247,18 +247,18 @@ export function NewRx({ editDraft: _editDraft }: Props) {
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Prescription summary card */}
           <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
-            <div class="bg-green-50 px-4 py-3 border-b border-green-100 flex items-center justify-between">
+            <div class="bg-sky-50 px-4 py-3 border-b border-sky-100 flex items-center justify-between">
               <div>
                 <p class="font-semibold text-gray-900">{rx.patient.name || 'Patient'}</p>
                 <p class="text-xs text-gray-500">{rx.patient.age ? `${rx.patient.age}y` : ''}{rx.patient.gender ? ` / ${rx.patient.gender}` : ''} · {dateStr}</p>
               </div>
-              <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Finalized</span>
+              <span class="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded-full font-medium">Finalized</span>
             </div>
 
             <div class="px-4 py-3 space-y-2">
               {rx.medicines.map((med, i) => (
                 <div key={i} class="flex items-start gap-2">
-                  <span class="text-sm text-green-600 font-bold shrink-0">{i + 1}.</span>
+                  <span class="text-sm font-bold shrink-0">{i + 1}.</span>
                   <div class="text-sm">
                     <span class="font-medium text-gray-900">{med.name}</span>
                     {med.dosage && <span class="text-gray-600"> {med.dosage}</span>}
@@ -292,7 +292,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
 
         {/* Action buttons */}
         <div class="p-4 bg-white border-t space-y-2">
-          <button onClick={handleShare} class="w-full bg-green-600 text-white py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 text-base">
+          <button onClick={handleShare} style="background: #1e3a5f" class="w-full text-white py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 text-base">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
               <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 0 1-4.243-1.215l-.302-.18-2.836.842.842-2.836-.18-.302A8 8 0 1 1 12 20z" />
@@ -316,7 +316,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     <>
     <div class="flex flex-col h-screen max-w-lg mx-auto">
         {/* Header with nav */}
-        <div class="flex items-center justify-between px-4 py-2.5 bg-green-700 text-white">
+        <div class="flex items-center justify-between px-4 py-2.5 text-white" style="background: #1e3a5f;">
           <h1 class="text-base font-semibold">Rx</h1>
           <div class="flex items-center gap-1">
             {messages.length > 1 && (
@@ -324,17 +324,17 @@ export function NewRx({ editDraft: _editDraft }: Props) {
                 + New
               </button>
             )}
-            <button onClick={() => route('/history')} class="p-2 rounded-full hover:bg-green-600" title="History">
+            <button onClick={() => route('/history')} class="p-2 rounded-full hover:bg-white/10" title="History">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
             </button>
-            <button onClick={() => route('/settings')} class="p-2 rounded-full hover:bg-green-600" title="Settings">
+            <button onClick={() => route('/settings')} class="p-2 rounded-full hover:bg-white/10" title="Settings">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
             </button>
           </div>
         </div>
 
         {/* Chat area */}
-        <div class="flex-1 overflow-y-auto px-3 py-4 space-y-3" style="background: #ECE5DD;">
+        <div class="flex-1 overflow-y-auto px-3 py-4 space-y-3" style="background: #f0f4f8;">
           {messages.map(msg => {
             if (msg.isTyping) {
               return (
@@ -353,8 +353,8 @@ export function NewRx({ editDraft: _editDraft }: Props) {
             if (msg.role === 'user') {
               return (
                 <div key={msg.id} class="flex justify-end">
-                  <div class="rounded-lg rounded-tr-none px-3 py-2 shadow-sm max-w-[85%]" style="background: #DCF8C6;">
-                    <p class="text-sm text-gray-800">{msg.text}</p>
+                  <div class="rounded-lg rounded-tr-none px-3 py-2 shadow-sm max-w-[85%]" style="background: #e0f2fe; border: 1px solid #7dd3fc;">
+                    <p class="text-sm" style="color: #0c4a6e">{msg.text}</p>
                   </div>
                 </div>
               );
@@ -364,7 +364,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
             return (
               <div key={msg.id} class="flex justify-start">
                 <div class="bg-white rounded-lg rounded-tl-none px-3 py-2 shadow-sm max-w-[85%] space-y-2">
-                  {msg.text && <p class="text-sm text-gray-800">{msg.text}</p>}
+                  {msg.text && <p class="text-sm" style="color: #0c4a6e">{msg.text}</p>}
                   {msg.draft && (
                     <RxCard
                       draft={msg.draft}
