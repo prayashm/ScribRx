@@ -18,7 +18,9 @@ Rules:
 - "x/7" notation: "3/7" means "3 days", "5/7" means "5 days", "2/52" means "2 weeks"
 - If the doctor says "Tab" assume tablet, "Cap" assume capsule, "Syp" assume syrup, "Inj" assume injection
 - Preserve ALL existing prescription data unless the doctor explicitly changes it
-- NEVER guess or invent information the doctor didn't say. Leave fields empty if not mentioned.
+- NEVER guess or invent information the doctor didn't say. Leave fields empty/omitted if not mentioned.
+- NEVER put explanations, reasoning, or meta-commentary in any field. Fields are for prescription data ONLY.
+- The 'notes' field is for patient-facing advice (e.g. 'Drink plenty of water'). Do NOT use it to explain your parsing decisions.
 - Partial prescriptions are fine — fill only what was said.
 - In follow_up_questions, ask about critical missing info (dosage, frequency, duration for medicines; patient name). Keep questions short and specific. Don't ask about optional fields like instructions unless clinically important.
 - If the doctor's message answers a previous question, merge the answer into the existing data.`;
