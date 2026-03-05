@@ -8,6 +8,9 @@ export const DoctorProfileSchema = z.object({
   phone: z.string().optional(),
   stampBase64: z.string().optional(),
   hmacSecret: z.string().optional(),
+  signatureFont: z.enum(['Dancing Script', 'Great Vibes', 'Caveat', 'Satisfy']).optional(),
+  signatureStyle: z.enum(['initials', 'lastName', 'fullName']).optional(),
+  signatureBase64: z.string().optional(),
 });
 
 export type DoctorProfile = z.infer<typeof DoctorProfileSchema>;

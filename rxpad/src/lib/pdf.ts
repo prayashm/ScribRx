@@ -14,12 +14,8 @@ export async function generatePrescriptionPDF(
   const contentW = pageW - margin * 2;
   let y = 12;
 
-  // ── Header: Doctor Info ──
-  if (profile.stampBase64) {
-    doc.addImage(profile.stampBase64, 'PNG', margin, y - 4, 22, 22);
-  }
-
-  const headerX = profile.stampBase64 ? margin + 26 : margin;
+  // ── Header: Doctor Info (text only, stamp is in footer) ──
+  const headerX = margin;
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.text(`Dr. ${profile.fullName}`, headerX, y + 2);
@@ -146,6 +142,12 @@ export async function generatePrescriptionPDF(
 
   // Signature + stamp bottom-right
   const sigX = pageW - margin - 42;
+
+  // Handwriting signature above the line
+  if (profile.signatureBase64) {
+    doc.addImage(profile.signatureBase64, 'PNG', sigX - 2, footerY - 30, 44, 12);
+  }
+
   if (profile.stampBase64) {
     doc.addImage(profile.stampBase64, 'PNG', sigX, footerY - 22, 20, 20);
   }

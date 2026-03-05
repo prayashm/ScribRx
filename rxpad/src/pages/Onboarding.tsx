@@ -2,10 +2,13 @@ import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { saveProfile, saveConfig } from '../lib/db';
 import { generateStamp } from '../lib/stamp';
+import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
 import { testApiKey } from '../lib/gemini';
 import { StampPreview } from '../components/StampPreview';
+import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
 import type { DoctorProfile } from '../schemas/profile';
+import type { SignatureFont, SignatureStyle } from '../lib/signature';
 
 export function Onboarding({ path: _path, onComplete }: { path?: string; onComplete?: () => void }) {
   const [step, setStep] = useState(0);
@@ -24,6 +27,11 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
   // Stamp state
   const [stampBase64, setStampBase64] = useState('');
   const [generatingStamp, setGeneratingStamp] = useState(false);
+
+  // Signature state
+  const [signatureFont, setSignatureFont] = useState<SignatureFont>('Dancing Script');
+  const [signatureStyle, setSignatureStyle] = useState<SignatureStyle>('fullName');
+  const [savingSignature, setSavingSignature] = useState(false);
 
   async function handleTestKey() {
     if (!apiKey.trim()) return;
@@ -44,13 +52,32 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
       clinicName: clinicName.trim() || undefined,
       phone: phone.trim() || undefined,
       hmacSecret: generateHmacSecret(),
+      signatureFont,
+      signatureStyle,
     };
     const stamp = await generateStamp(profile);
     profile.stampBase64 = stamp;
+    const sig = await generateSignature(profile);
+    profile.signatureBase64 = sig;
     await saveProfile(profile);
     setStampBase64(stamp);
     setGeneratingStamp(false);
     setStep(3);
+  }
+
+  async function handleSignatureSave() {
+    setSavingSignature(true);
+    const { getProfile } = await import('../lib/db');
+    const existing = await getProfile();
+    if (existing) {
+      existing.signatureFont = signatureFont;
+      existing.signatureStyle = signatureStyle;
+      const sig = await generateSignature(existing);
+      existing.signatureBase64 = sig;
+      await saveProfile(existing);
+    }
+    setSavingSignature(false);
+    setStep(4);
   }
 
   const profileValid = fullName.trim() && designation.trim() && regNumber.trim();
@@ -60,7 +87,7 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
       <div class="w-full max-w-md">
         {/* Progress dots */}
         <div class="flex justify-center gap-2 mb-8">
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
               class={`w-2 h-2 rounded-full ${i === step ? 'bg-blue-600' : i < step ? 'bg-blue-300' : 'bg-gray-300'}`}
@@ -210,8 +237,40 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 4: Done */}
+        {/* Step 4: Signature */}
         {step === 4 && (
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Your Signature</h2>
+            <p class="text-sm text-gray-600 mb-4">
+              Choose a handwriting style for your prescription signature.
+            </p>
+            <SignatureSelector
+              selectedFont={signatureFont}
+              selectedStyle={signatureStyle}
+              onFontChange={setSignatureFont}
+              onStyleChange={setSignatureStyle}
+              fullName={fullName}
+            />
+            <div class="mt-4">
+              <SignaturePreview fullName={fullName} font={signatureFont} style={signatureStyle} />
+            </div>
+            <div class="flex gap-3 mt-4">
+              <button onClick={() => setStep(3)} class="flex-1 text-gray-600 py-2.5 rounded-lg text-sm">
+                Back
+              </button>
+              <button
+                onClick={handleSignatureSave}
+                disabled={savingSignature}
+                class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm disabled:bg-gray-300"
+              >
+                {savingSignature ? 'Saving...' : 'Looks good!'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Done */}
+        {step === 5 && (
           <div class="text-center">
             <div class="text-5xl mb-4">&#10003;</div>
             <h2 class="text-2xl font-bold text-gray-900 mb-2">You're all set!</h2>

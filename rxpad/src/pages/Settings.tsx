@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'preact/hooks';
 import { Shell } from '../components/Shell';
 import { StampPreview } from '../components/StampPreview';
+import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
 import { saveProfile, getProfile, saveConfig, getConfig } from '../lib/db';
 import { generateStamp } from '../lib/stamp';
+import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
 import { testApiKey } from '../lib/gemini';
 import type { DoctorProfile } from '../schemas/profile';
+import type { SignatureFont, SignatureStyle } from '../lib/signature';
 
 export function Settings({ path: _path }: { path?: string }) {
   const [apiKey, setApiKey] = useState('');
@@ -18,6 +21,8 @@ export function Settings({ path: _path }: { path?: string }) {
   const [phone, setPhone] = useState('');
   const [stampBase64, setStampBase64] = useState('');
   const [hmacSecret, setHmacSecret] = useState('');
+  const [signatureFont, setSignatureFont] = useState<SignatureFont>('Dancing Script');
+  const [signatureStyle, setSignatureStyle] = useState<SignatureStyle>('fullName');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -40,6 +45,8 @@ export function Settings({ path: _path }: { path?: string }) {
       setPhone(profile.phone || '');
       setStampBase64(profile.stampBase64 || '');
       setHmacSecret(profile.hmacSecret || '');
+      setSignatureFont(profile.signatureFont || 'Dancing Script');
+      setSignatureStyle(profile.signatureStyle || 'fullName');
     }
   }
 
@@ -67,10 +74,15 @@ export function Settings({ path: _path }: { path?: string }) {
       clinicName: clinicName.trim() || undefined,
       phone: phone.trim() || undefined,
       hmacSecret: secret,
+      signatureFont,
+      signatureStyle,
     };
 
     const stamp = await generateStamp(profile);
     profile.stampBase64 = stamp;
+
+    const sig = await generateSignature(profile);
+    profile.signatureBase64 = sig;
 
     await saveProfile(profile);
     setStampBase64(stamp);
@@ -179,6 +191,22 @@ export function Settings({ path: _path }: { path?: string }) {
             <div class="mt-4 border-t pt-4">
               <h3 class="text-xs font-medium text-gray-600 mb-2">Stamp Preview</h3>
               <StampPreview base64={stampBase64} />
+            </div>
+          )}
+
+          {fullName.trim() && (
+            <div class="mt-4 border-t pt-4">
+              <h3 class="text-xs font-medium text-gray-600 mb-3">Signature</h3>
+              <SignatureSelector
+                selectedFont={signatureFont}
+                selectedStyle={signatureStyle}
+                onFontChange={setSignatureFont}
+                onStyleChange={setSignatureStyle}
+                fullName={fullName}
+              />
+              <div class="mt-3">
+                <SignaturePreview fullName={fullName} font={signatureFont} style={signatureStyle} />
+              </div>
             </div>
           )}
 
