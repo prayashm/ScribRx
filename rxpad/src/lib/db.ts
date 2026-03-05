@@ -98,3 +98,14 @@ export async function getNextRxId(): Promise<string> {
   await db.put('config', next, counterKey);
   return `RX-${dateStr}-${String(next).padStart(4, '0')}`;
 }
+
+export async function resetDB(): Promise<void> {
+  const { deleteDB } = await import('idb');
+  // First clear the current session reference
+  if (dbPromise) {
+    const db = await dbPromise;
+    db.close();
+    dbPromise = null;
+  }
+  await deleteDB(DB_NAME);
+}
