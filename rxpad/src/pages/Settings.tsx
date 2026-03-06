@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { Shell } from '../components/Shell';
 import { StampPreview } from '../components/StampPreview';
 import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
@@ -27,6 +28,7 @@ export function Settings({ path: _path }: { path?: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { canInstall, isInstalled, install } = useInstallPrompt();
 
   useEffect(() => {
     loadData();
@@ -220,6 +222,35 @@ export function Settings({ path: _path }: { path?: string }) {
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Profile'}
           </button>
         </section>
+
+        {/* Install App */}
+        {canInstall && !isInstalled && (
+          <section class="bg-blue-50 rounded-xl border border-blue-200 p-4 mb-4">
+            <div class="flex items-center gap-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-blue-900">Install ScribRx</p>
+                <p class="text-xs text-blue-700">Add to home screen for quick access &amp; offline use</p>
+              </div>
+              <button
+                onClick={install}
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                Install
+              </button>
+            </div>
+          </section>
+        )}
+
+        {isInstalled && (
+          <section class="bg-green-50 rounded-xl border border-green-200 p-4 mb-4">
+            <p class="text-sm text-green-800 text-center">✓ App installed on your device</p>
+          </section>
+        )}
 
         {/* Danger Zone */}
         <section class="mt-8 pt-4 border-t">
