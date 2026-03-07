@@ -13,6 +13,7 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [showUpdate, setShowUpdate] = useState(false);
   const [error, resetError] = useErrorBoundary();
 
   useEffect(() => {
@@ -21,6 +22,14 @@ export function App() {
     const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Watch for PWA updates
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        setShowUpdate(true);
+      });
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -77,6 +86,17 @@ export function App() {
 
   return (
     <div class="h-full">
+      {showUpdate && (
+        <div class="bg-blue-600 text-white text-xs py-2 px-4 flex items-center justify-between animate-in slide-in-from-top duration-300">
+          <span>New version available!</span>
+          <button 
+            onClick={() => window.location.reload()} 
+            class="bg-white text-blue-600 px-2 py-1 rounded font-bold uppercase tracking-wider"
+          >
+            Update
+          </button>
+        </div>
+      )}
       {isOffline && (
         <div class="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs text-center py-1.5 px-4">
           You're offline. Voice/text parsing unavailable. Manual entry still works.
