@@ -1,11 +1,30 @@
 import { generateObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { PrescriptionDraftSchema } from '../schemas/prescription';
 import type { PrescriptionDraft } from '../schemas/prescription';
+
+export type AIProvider = 'gemini' | 'openrouter';
 
 function getGeminiModel(apiKey: string) {
   const google = createGoogleGenerativeAI({ apiKey });
   return google('gemini-2.5-flash');
+}
+
+function getOpenRouterModel(apiKey: string) {
+  const openrouter = createOpenAI({
+    apiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    headers: {
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'ScribRx',
+    },
+  });
+  return openrouter('google/gemini-2.0-flash-001');
+}
+
+export function getModel(provider: AIProvider, apiKey: string) {
+  return provider === 'openrouter' ? getOpenRouterModel(apiKey) : getGeminiModel(apiKey);
 }
 
 const SYSTEM_PROMPT = `You are a medical prescription assistant for qualified Indian doctors.
@@ -26,11 +45,12 @@ Rules:
 - If the doctor's message answers a previous question, merge the answer into the existing data.`;
 
 export async function parsePrescriptionUpdate(
+  provider: AIProvider,
   apiKey: string,
   currentState: PrescriptionDraft | null,
   input: { type: 'audio'; data: string; mimeType: string } | { type: 'text'; text: string }
 ): Promise<PrescriptionDraft> {
-  const model = getGeminiModel(apiKey);
+  const model = getModel(provider, apiKey);
 
   const userContent: Array<{ type: string; text?: string; data?: string; mimeType?: string; mediaType?: string }> = [];
 
@@ -69,9 +89,9 @@ export async function parsePrescriptionUpdate(
   return object;
 }
 
-export async function testApiKey(apiKey: string): Promise<boolean> {
+export async function testApiKey(provider: AIProvider, apiKey: string): Promise<boolean> {
   try {
-    const model = getGeminiModel(apiKey);
+    const model = getModel(provider, apiKey);
     const { z } = await import('zod');
     await generateObject({
       model,

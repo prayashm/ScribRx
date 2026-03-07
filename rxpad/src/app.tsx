@@ -6,6 +6,8 @@ import { History } from './pages/History';
 import { Settings } from './pages/Settings';
 import { Onboarding } from './pages/Onboarding';
 import { Verify } from './pages/Verify';
+import { AuthCallback } from './pages/AuthCallback';
+import type { AIProvider } from './lib/gemini';
 
 export function App() {
   const [ready, setReady] = useState(false);
@@ -26,9 +28,16 @@ export function App() {
   }, []);
 
   async function checkSetup() {
-    const profile = await getProfile();
-    const apiKey = await getConfig<string>('geminiApiKey');
-    if (!profile || !apiKey) {
+    const [profile, provider, geminiKey, openrouterKey] = await Promise.all([
+      getProfile(),
+      getConfig<AIProvider>('aiProvider'),
+      getConfig<string>('geminiApiKey'),
+      getConfig<string>('openrouterApiKey'),
+    ]);
+
+    const selectedProvider = provider || 'gemini';
+    const activeKey = selectedProvider === 'openrouter' ? openrouterKey : geminiKey;
+    if (!profile || !activeKey) {
       setNeedsOnboarding(true);
     }
     setReady(true);
@@ -62,7 +71,7 @@ export function App() {
     );
   }
 
-  if (needsOnboarding && window.location.pathname !== '/verify') {
+  if (needsOnboarding && window.location.pathname !== '/verify' && window.location.pathname !== '/auth/callback') {
     return <Onboarding onComplete={() => setNeedsOnboarding(false)} />;
   }
 
@@ -79,6 +88,7 @@ export function App() {
         <Settings path="/settings" />
         <Onboarding path="/onboarding" />
         <Verify path="/verify" />
+        <AuthCallback path="/auth/callback" />
       </Router>
     </div>
   );

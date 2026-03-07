@@ -8,13 +8,18 @@ import { saveProfile, getProfile, saveConfig, getConfig, resetDB } from '../lib/
 import { generateStamp } from '../lib/stamp';
 import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
-import { testApiKey } from '../lib/gemini';
+import { testApiKey, type AIProvider } from '../lib/gemini';
+import { startOAuthFlow, testOpenRouterKey } from '../lib/openrouter';
 import type { DoctorProfile } from '../schemas/profile';
 import type { SignatureFont, SignatureStyle } from '../lib/signature';
 
 export function Settings({ path: _path }: { path?: string }) {
-  const [apiKey, setApiKey] = useState('');
-  const [apiStatus, setApiStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [provider, setProvider] = useState<AIProvider>('gemini');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [openrouterApiKey, setOpenrouterApiKey] = useState('');
+  const [geminiStatus, setGeminiStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [openrouterStatus, setOpenrouterStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [providerError, setProviderError] = useState('');
 
   const [fullName, setFullName] = useState('');
   const [designation, setDesignation] = useState('');
@@ -35,12 +40,23 @@ export function Settings({ path: _path }: { path?: string }) {
   }, []);
 
   async function loadData() {
-    const key = await getConfig<string>('geminiApiKey');
-    if (key) {
-      setApiKey(key);
-      setApiStatus('valid');
+    const [savedProvider, geminiKey, openrouterKey, profile] = await Promise.all([
+      getConfig<AIProvider>('aiProvider'),
+      getConfig<string>('geminiApiKey'),
+      getConfig<string>('openrouterApiKey'),
+      getProfile(),
+    ]);
+
+    if (savedProvider) setProvider(savedProvider);
+    if (geminiKey) {
+      setGeminiApiKey(geminiKey);
+      setGeminiStatus('valid');
     }
-    const profile = await getProfile();
+    if (openrouterKey) {
+      setOpenrouterApiKey(openrouterKey);
+      setOpenrouterStatus('valid');
+    }
+
     if (profile) {
       setFullName(profile.fullName);
       setDesignation(profile.designation);
@@ -54,15 +70,50 @@ export function Settings({ path: _path }: { path?: string }) {
     }
   }
 
-  async function handleTestKey() {
-    if (!apiKey.trim()) return;
-    setApiStatus('testing');
-    const valid = await testApiKey(apiKey.trim());
+  async function handleProviderChange(nextProvider: AIProvider) {
+    setProvider(nextProvider);
+    await saveConfig('aiProvider', nextProvider);
+  }
+
+  async function handleTestGeminiKey() {
+    if (!geminiApiKey.trim()) return;
+    setProviderError('');
+    setGeminiStatus('testing');
+    const valid = await testApiKey('gemini', geminiApiKey.trim());
     if (valid) {
-      setApiStatus('valid');
-      await saveConfig('geminiApiKey', apiKey.trim());
+      setGeminiStatus('valid');
+      await saveConfig('geminiApiKey', geminiApiKey.trim());
+      await saveConfig('aiProvider', 'gemini');
+      setProvider('gemini');
     } else {
-      setApiStatus('invalid');
+      setGeminiStatus('invalid');
+    }
+  }
+
+  async function handleTestOpenRouterKey() {
+    if (!openrouterApiKey.trim()) return;
+    setProviderError('');
+    setOpenrouterStatus('testing');
+    const valid = await testOpenRouterKey(openrouterApiKey.trim());
+    if (valid) {
+      setOpenrouterStatus('valid');
+      await saveConfig('openrouterApiKey', openrouterApiKey.trim());
+      await saveConfig('aiProvider', 'openrouter');
+      setProvider('openrouter');
+    } else {
+      setOpenrouterStatus('invalid');
+    }
+  }
+
+  async function handleConnectOpenRouter() {
+    try {
+      setProviderError('');
+      await startOAuthFlow({
+        redirectUri: `${window.location.origin}/auth/callback`,
+        returnPath: '/settings',
+      });
+    } catch (err: any) {
+      setProviderError(err?.message || 'Failed to start OpenRouter sign-in.');
     }
   }
 
@@ -103,44 +154,103 @@ export function Settings({ path: _path }: { path?: string }) {
       <div class="p-4 max-w-lg mx-auto">
         <h1 class="text-xl font-bold text-gray-900 mb-6">Settings</h1>
 
-        {/* API Key Section */}
         <section class="bg-white rounded-xl border p-4 mb-4">
-          <h2 class="font-semibold text-gray-800 mb-3">Gemini API Key</h2>
-          <p class="text-xs text-gray-500 mb-3">
-            Get a free API key from ai.google.dev. Required for voice and text parsing.
-          </p>
-          <div class="flex gap-2">
-            <input
-              type="password"
-              class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Paste your Gemini API key"
-              value={apiKey}
-              onInput={(e) => {
-                setApiKey((e.target as HTMLInputElement).value);
-                setApiStatus('untested');
-              }}
-            />
+          <h2 class="font-semibold text-gray-800 mb-3">AI Provider</h2>
+
+          <div class="grid grid-cols-2 gap-2 mb-4">
             <button
-              onClick={handleTestKey}
-              disabled={!apiKey.trim() || apiStatus === 'testing'}
-              class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium disabled:bg-gray-300 whitespace-nowrap"
+              onClick={() => handleProviderChange('gemini')}
+              class={`px-3 py-2 rounded-lg text-sm font-medium border ${provider === 'gemini' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
             >
-              {apiStatus === 'testing' ? 'Testing...' : 'Test'}
+              Gemini
+            </button>
+            <button
+              onClick={() => handleProviderChange('openrouter')}
+              class={`px-3 py-2 rounded-lg text-sm font-medium border ${provider === 'openrouter' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+            >
+              OpenRouter
             </button>
           </div>
-          {apiStatus === 'valid' && (
-            <p class="mt-2 text-sm text-green-600 flex items-center gap-1">
-              <span>&#10003;</span> API key is valid
-            </p>
+
+          {provider === 'gemini' && (
+            <>
+              <p class="text-xs text-gray-500 mb-3">Get a free API key from ai.google.dev. Required for voice and text parsing.</p>
+              <div class="flex gap-2">
+                <input
+                  type="password"
+                  class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Paste your Gemini API key"
+                  value={geminiApiKey}
+                  onInput={(e) => {
+                    setGeminiApiKey((e.target as HTMLInputElement).value);
+                    setGeminiStatus('untested');
+                  }}
+                />
+                <button
+                  onClick={handleTestGeminiKey}
+                  disabled={!geminiApiKey.trim() || geminiStatus === 'testing'}
+                  class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium disabled:bg-gray-300 whitespace-nowrap"
+                >
+                  {geminiStatus === 'testing' ? 'Testing...' : 'Test'}
+                </button>
+              </div>
+              {geminiStatus === 'valid' && (
+                <p class="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <span>&#10003;</span> API key is valid
+                </p>
+              )}
+              {geminiStatus === 'invalid' && (
+                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <span>&#10007;</span> Invalid API key. Please check and try again.
+                </p>
+              )}
+            </>
           )}
-          {apiStatus === 'invalid' && (
-            <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
-              <span>&#10007;</span> Invalid API key. Please check and try again.
-            </p>
+
+          {provider === 'openrouter' && (
+            <>
+              <p class="text-xs text-gray-500 mb-3">Connect with OpenRouter OAuth or paste an OpenRouter API key.</p>
+              <button
+                onClick={handleConnectOpenRouter}
+                class="w-full mb-3 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium"
+              >
+                Connect with OpenRouter OAuth
+              </button>
+              <div class="flex gap-2">
+                <input
+                  type="password"
+                  class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Paste your OpenRouter API key"
+                  value={openrouterApiKey}
+                  onInput={(e) => {
+                    setOpenrouterApiKey((e.target as HTMLInputElement).value);
+                    setOpenrouterStatus('untested');
+                  }}
+                />
+                <button
+                  onClick={handleTestOpenRouterKey}
+                  disabled={!openrouterApiKey.trim() || openrouterStatus === 'testing'}
+                  class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium disabled:bg-gray-300 whitespace-nowrap"
+                >
+                  {openrouterStatus === 'testing' ? 'Testing...' : 'Test'}
+                </button>
+              </div>
+              {openrouterStatus === 'valid' && (
+                <p class="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <span>&#10003;</span> OpenRouter key is valid
+                </p>
+              )}
+              {openrouterStatus === 'invalid' && (
+                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <span>&#10007;</span> Invalid OpenRouter key. Please check and try again.
+                </p>
+              )}
+            </>
           )}
+
+          {providerError && <p class="mt-2 text-sm text-red-600">{providerError}</p>}
         </section>
 
-        {/* Doctor Profile Section */}
         <section class="bg-white rounded-xl border p-4">
           <h2 class="font-semibold text-gray-800 mb-3">Doctor Profile</h2>
           <div class="space-y-3">
@@ -223,7 +333,6 @@ export function Settings({ path: _path }: { path?: string }) {
           </button>
         </section>
 
-        {/* Install App */}
         {canInstall && !isInstalled && (
           <section class="bg-blue-50 rounded-xl border border-blue-200 p-4 mb-4">
             <div class="flex items-center gap-3">
@@ -252,7 +361,6 @@ export function Settings({ path: _path }: { path?: string }) {
           </section>
         )}
 
-        {/* Danger Zone */}
         <section class="mt-8 pt-4 border-t">
           <h2 class="text-xs font-semibold text-red-600 uppercase tracking-wider mb-3 px-1">Danger Zone</h2>
           <div class="bg-red-50 rounded-xl border border-red-100 p-4">

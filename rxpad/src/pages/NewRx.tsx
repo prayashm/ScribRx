@@ -12,7 +12,7 @@ import {
 } from '../lib/db';
 import { generatePrescriptionPDF } from '../lib/pdf';
 import { signPrescription, generateQRCode } from '../lib/qr';
-import { parsePrescriptionUpdate } from '../lib/gemini';
+import { parsePrescriptionUpdate, type AIProvider } from '../lib/gemini';
 import type { Prescription, PrescriptionDraft } from '../schemas/prescription';
 import type { DoctorProfile } from '../schemas/profile';
 
@@ -42,6 +42,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
   });
   const [aiLoading, setAiLoading] = useState(false);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
+  const [provider, setProvider] = useState<AIProvider>('gemini');
   const [apiKey, setApiKey] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -54,7 +55,11 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     (async () => {
       const p = await getProfile();
       setProfile(p);
-      const key = await getConfig<string>('geminiApiKey');
+      const selectedProvider = (await getConfig<AIProvider>('aiProvider')) || 'gemini';
+      setProvider(selectedProvider);
+      const key = selectedProvider === 'openrouter'
+        ? await getConfig<string>('openrouterApiKey')
+        : await getConfig<string>('geminiApiKey');
       if (key) setApiKey(key);
 
       // Restore draft or show greeting
@@ -115,7 +120,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
 
     try {
       const currentDraft = (draft.patient?.name || draft.medicines.length > 0) ? draft : null;
-      const result = await parsePrescriptionUpdate(apiKey, currentDraft, { type: 'text', text });
+      const result = await parsePrescriptionUpdate(provider, apiKey, currentDraft, { type: 'text', text });
 
       // Merge result into draft
       const newDraft: PrescriptionDraft = {
@@ -143,8 +148,8 @@ export function NewRx({ editDraft: _editDraft }: Props) {
       setMessages(prev => prev.filter(m => m.id !== typingId).concat({
         id: ++msgId,
         role: 'ai',
-        text: err?.message?.includes('401')
-          ? '⚠️ API key invalid. Check Settings.'
+        text: err?.message?.includes('401') || err?.message?.includes('403')
+          ? `⚠️ ${provider === 'openrouter' ? 'OpenRouter' : 'Gemini'} key invalid. Check Settings.`
           : `⚠️ ${err?.message || 'Something went wrong. Try again.'}`,
       }));
     } finally {

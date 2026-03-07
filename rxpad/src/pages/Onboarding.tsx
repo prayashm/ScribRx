@@ -1,10 +1,11 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
-import { saveProfile, saveConfig } from '../lib/db';
+import { saveProfile, saveConfig, getConfig } from '../lib/db';
 import { generateStamp } from '../lib/stamp';
 import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
-import { testApiKey } from '../lib/gemini';
+import { testApiKey, type AIProvider } from '../lib/gemini';
+import { startOAuthFlow, testOpenRouterKey } from '../lib/openrouter';
 import { StampPreview } from '../components/StampPreview';
 import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
 import type { DoctorProfile } from '../schemas/profile';
@@ -13,33 +14,86 @@ import type { SignatureFont, SignatureStyle } from '../lib/signature';
 export function Onboarding({ path: _path, onComplete }: { path?: string; onComplete?: () => void }) {
   const [step, setStep] = useState(0);
 
-  // API key state
-  const [apiKey, setApiKey] = useState('');
-  const [apiStatus, setApiStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [provider, setProvider] = useState<AIProvider>('gemini');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [openrouterApiKey, setOpenrouterApiKey] = useState('');
+  const [geminiStatus, setGeminiStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [openrouterStatus, setOpenrouterStatus] = useState<'untested' | 'testing' | 'valid' | 'invalid'>('untested');
+  const [providerError, setProviderError] = useState('');
 
-  // Profile state
   const [fullName, setFullName] = useState('');
   const [designation, setDesignation] = useState('');
   const [regNumber, setRegNumber] = useState('');
   const [clinicName, setClinicName] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Stamp state
   const [stampBase64, setStampBase64] = useState('');
   const [generatingStamp, setGeneratingStamp] = useState(false);
 
-  // Signature state
   const [signatureFont, setSignatureFont] = useState<SignatureFont>('Dancing Script');
   const [signatureStyle, setSignatureStyle] = useState<SignatureStyle>('fullName');
   const [savingSignature, setSavingSignature] = useState(false);
 
-  async function handleTestKey() {
-    if (!apiKey.trim()) return;
-    setApiStatus('testing');
-    const valid = await testApiKey(apiKey.trim());
-    setApiStatus(valid ? 'valid' : 'invalid');
+  useEffect(() => {
+    (async () => {
+      const [savedProvider, savedGemini, savedOpenRouter] = await Promise.all([
+        getConfig<AIProvider>('aiProvider'),
+        getConfig<string>('geminiApiKey'),
+        getConfig<string>('openrouterApiKey'),
+      ]);
+
+      if (savedProvider) setProvider(savedProvider);
+      if (savedGemini) {
+        setGeminiApiKey(savedGemini);
+        setGeminiStatus('valid');
+      }
+      if (savedOpenRouter) {
+        setOpenrouterApiKey(savedOpenRouter);
+        setOpenrouterStatus('valid');
+      }
+    })();
+  }, []);
+
+  async function handleProviderChange(nextProvider: AIProvider) {
+    setProvider(nextProvider);
+    await saveConfig('aiProvider', nextProvider);
+  }
+
+  async function handleTestGeminiKey() {
+    if (!geminiApiKey.trim()) return;
+    setProviderError('');
+    setGeminiStatus('testing');
+    const valid = await testApiKey('gemini', geminiApiKey.trim());
+    setGeminiStatus(valid ? 'valid' : 'invalid');
     if (valid) {
-      await saveConfig('geminiApiKey', apiKey.trim());
+      await saveConfig('geminiApiKey', geminiApiKey.trim());
+      await saveConfig('aiProvider', 'gemini');
+      setProvider('gemini');
+    }
+  }
+
+  async function handleTestOpenRouterKey() {
+    if (!openrouterApiKey.trim()) return;
+    setProviderError('');
+    setOpenrouterStatus('testing');
+    const valid = await testOpenRouterKey(openrouterApiKey.trim());
+    setOpenrouterStatus(valid ? 'valid' : 'invalid');
+    if (valid) {
+      await saveConfig('openrouterApiKey', openrouterApiKey.trim());
+      await saveConfig('aiProvider', 'openrouter');
+      setProvider('openrouter');
+    }
+  }
+
+  async function handleConnectOpenRouter() {
+    try {
+      setProviderError('');
+      await startOAuthFlow({
+        redirectUri: `${window.location.origin}/auth/callback`,
+        returnPath: '/onboarding',
+      });
+    } catch (err: any) {
+      setProviderError(err?.message || 'Failed to start OpenRouter sign-in.');
     }
   }
 
@@ -77,15 +131,15 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
       await saveProfile(existing);
     }
     setSavingSignature(false);
-    setStep(4);
+    setStep(5);
   }
 
   const profileValid = fullName.trim() && designation.trim() && regNumber.trim();
+  const providerReady = provider === 'gemini' ? geminiStatus === 'valid' : openrouterStatus === 'valid';
 
   return (
     <div class="min-h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-blue-50 to-white">
       <div class="w-full max-w-md">
-        {/* Progress dots */}
         <div class="flex justify-center gap-2 mb-8">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
@@ -95,7 +149,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           ))}
         </div>
 
-        {/* Step 0: Welcome */}
         {step === 0 && (
           <div class="text-center">
             <div class="text-5xl mb-4">{'\u211E'}</div>
@@ -112,49 +165,105 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 1: API Key */}
         {step === 1 && (
           <div>
-            <h2 class="text-xl font-bold text-gray-900 mb-2">Connect Gemini AI</h2>
-            <p class="text-sm text-gray-600 mb-1">
-              RxPad uses Google Gemini to parse your voice notes into structured prescriptions.
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Choose AI Provider</h2>
+            <p class="text-sm text-gray-600 mb-4">
+              Connect either Gemini BYOK or OpenRouter OAuth/BYOK for voice and text parsing.
             </p>
-            <p class="text-sm text-gray-500 mb-4">
-              Get a free API key from{' '}
-              <a href="https://ai.google.dev" target="_blank" class="text-blue-600 underline">
-                ai.google.dev
-              </a>
-            </p>
-            <input
-              type="password"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Paste your Gemini API key"
-              value={apiKey}
-              onInput={(e) => {
-                setApiKey((e.target as HTMLInputElement).value);
-                setApiStatus('untested');
-              }}
-            />
-            <button
-              onClick={handleTestKey}
-              disabled={!apiKey.trim() || apiStatus === 'testing'}
-              class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium text-sm disabled:opacity-50 mb-3"
-            >
-              {apiStatus === 'testing' ? 'Testing connection...' : 'Test Connection'}
-            </button>
-            {apiStatus === 'valid' && (
-              <p class="text-sm text-green-600 mb-3">&#10003; Connected successfully!</p>
+
+            <div class="grid grid-cols-2 gap-2 mb-4">
+              <button
+                onClick={() => handleProviderChange('gemini')}
+                class={`px-3 py-2 rounded-lg text-sm font-medium border ${provider === 'gemini' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              >
+                Gemini
+              </button>
+              <button
+                onClick={() => handleProviderChange('openrouter')}
+                class={`px-3 py-2 rounded-lg text-sm font-medium border ${provider === 'openrouter' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              >
+                OpenRouter
+              </button>
+            </div>
+
+            {provider === 'gemini' && (
+              <>
+                <p class="text-sm text-gray-500 mb-3">
+                  Get a free key from{' '}
+                  <a href="https://ai.google.dev" target="_blank" class="text-blue-600 underline">
+                    ai.google.dev
+                  </a>
+                </p>
+                <input
+                  type="password"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Paste your Gemini API key"
+                  value={geminiApiKey}
+                  onInput={(e) => {
+                    setGeminiApiKey((e.target as HTMLInputElement).value);
+                    setGeminiStatus('untested');
+                  }}
+                />
+                <button
+                  onClick={handleTestGeminiKey}
+                  disabled={!geminiApiKey.trim() || geminiStatus === 'testing'}
+                  class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium text-sm disabled:opacity-50 mb-3"
+                >
+                  {geminiStatus === 'testing' ? 'Testing connection...' : 'Test Connection'}
+                </button>
+                {geminiStatus === 'valid' && (
+                  <p class="text-sm text-green-600 mb-3">&#10003; Connected successfully!</p>
+                )}
+                {geminiStatus === 'invalid' && (
+                  <p class="text-sm text-red-600 mb-3">&#10007; Invalid key. Please check and try again.</p>
+                )}
+              </>
             )}
-            {apiStatus === 'invalid' && (
-              <p class="text-sm text-red-600 mb-3">&#10007; Invalid key. Please check and try again.</p>
+
+            {provider === 'openrouter' && (
+              <>
+                <button
+                  onClick={handleConnectOpenRouter}
+                  class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium text-sm mb-3"
+                >
+                  Connect with OpenRouter OAuth
+                </button>
+                <input
+                  type="password"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Or paste OpenRouter API key"
+                  value={openrouterApiKey}
+                  onInput={(e) => {
+                    setOpenrouterApiKey((e.target as HTMLInputElement).value);
+                    setOpenrouterStatus('untested');
+                  }}
+                />
+                <button
+                  onClick={handleTestOpenRouterKey}
+                  disabled={!openrouterApiKey.trim() || openrouterStatus === 'testing'}
+                  class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium text-sm disabled:opacity-50 mb-3"
+                >
+                  {openrouterStatus === 'testing' ? 'Testing connection...' : 'Test Connection'}
+                </button>
+                {openrouterStatus === 'valid' && (
+                  <p class="text-sm text-green-600 mb-3">&#10003; Connected successfully!</p>
+                )}
+                {openrouterStatus === 'invalid' && (
+                  <p class="text-sm text-red-600 mb-3">&#10007; Invalid key. Please check and try again.</p>
+                )}
+              </>
             )}
+
+            {providerError && <p class="text-sm text-red-600 mb-3">{providerError}</p>}
+
             <div class="flex gap-3 mt-4">
               <button onClick={() => setStep(0)} class="flex-1 text-gray-600 py-2.5 rounded-lg text-sm">
                 Back
               </button>
               <button
                 onClick={() => setStep(2)}
-                disabled={apiStatus !== 'valid'}
+                disabled={!providerReady}
                 class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm disabled:bg-gray-300"
               >
                 Next
@@ -163,7 +272,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 2: Doctor Profile */}
         {step === 2 && (
           <div>
             <h2 class="text-xl font-bold text-gray-900 mb-2">Your Profile</h2>
@@ -215,7 +323,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 3: Stamp Preview */}
         {step === 3 && (
           <div class="text-center">
             <h2 class="text-xl font-bold text-gray-900 mb-2">Your Stamp</h2>
@@ -237,7 +344,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 4: Signature */}
         {step === 4 && (
           <div>
             <h2 class="text-xl font-bold text-gray-900 mb-2">Your Signature</h2>
@@ -269,7 +375,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
           </div>
         )}
 
-        {/* Step 5: Done */}
         {step === 5 && (
           <div class="text-center">
             <div class="text-5xl mb-4">&#10003;</div>
