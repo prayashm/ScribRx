@@ -98,7 +98,16 @@ export function NewRx({ editDraft: _editDraft }: Props) {
   const canFinalize =
     !!(draft.patient?.name?.trim()) &&
     !!(draft.patient?.age && draft.patient.age > 0) &&
+    draft.medicines.length > 0 &&
     draft.medicines.some(m => m.name?.trim());
+
+  console.log('Draft Status:', { 
+    hasName: !!(draft.patient?.name?.trim()),
+    hasAge: !!(draft.patient?.age && draft.patient.age > 0),
+    hasMedsLength: draft.medicines.length > 0,
+    hasValidMed: draft.medicines.some(m => m.name?.trim()),
+    canFinalize 
+  });
 
   async function handleSend(text: string) {
     // Add user message
