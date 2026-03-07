@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const MedicineSchema = z.object({
-  name: z.string().describe('Medicine name — Indian brand name or generic name'),
-  genericName: z.string().optional().describe('Generic (INN) name of the medicine, e.g. "Paracetamol" for Dolo, "Amoxicillin" for Mox. Always provide if a brand name is used. Leave empty only if already generic.'),
+  name: z.string().describe('Medicine name — Indian brand name or generic name. REQUIRED.'),
+  genericName: z.string().optional().describe('Optional generic (INN) name of the medicine. E.g. "Paracetamol" for Dolo.'),
   dosage: z.string().optional().describe('Dosage amount, e.g. "500mg", "650mg", "10ml". Leave empty if not mentioned.'),
   frequency: z.string().optional().describe('Dosing frequency. Indian convention: "1-0-1" means morning-skip-evening. Also accept: OD, BD, TDS, SOS, HS. Leave empty if not mentioned.'),
   duration: z.string().optional().describe('Duration of course, e.g. "3 days", "5 days", "1 week". Leave empty if not mentioned.'),

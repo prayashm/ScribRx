@@ -30,6 +30,28 @@ interface Props {
   editDraft?: Prescription;
 }
 
+export function mergeDraft(current: PrescriptionDraft, result: PrescriptionDraft): PrescriptionDraft {
+  return {
+    patient: {
+      name: result.patient?.name || current.patient?.name,
+      age: result.patient?.age ?? current.patient?.age,
+      gender: result.patient?.gender || current.patient?.gender,
+    },
+    diagnosis: result.diagnosis || current.diagnosis,
+    medicines: (result.medicines && result.medicines.length > 0) ? result.medicines : current.medicines,
+    lab_tests: (result.lab_tests && result.lab_tests.length > 0) ? result.lab_tests : current.lab_tests,
+    notes: result.notes || current.notes,
+    follow_up_questions: result.follow_up_questions || [],
+  };
+}
+
+export function canFinalizeDraft(draft: PrescriptionDraft): boolean {
+  return !!(draft.patient?.name?.trim()) &&
+    !!(draft.patient?.age && draft.patient.age > 0) &&
+    draft.medicines.length > 0 &&
+    draft.medicines.some(m => m.name?.trim());
+}
+
 let msgId = 0;
 
 export function NewRx({ editDraft: _editDraft }: Props) {
@@ -95,19 +117,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     }
   }, [draft, messages]);
 
-  const canFinalize =
-    !!(draft.patient?.name?.trim()) &&
-    !!(draft.patient?.age && draft.patient.age > 0) &&
-    draft.medicines.length > 0 &&
-    draft.medicines.some(m => m.name?.trim());
-
-  console.log('Draft Status:', { 
-    hasName: !!(draft.patient?.name?.trim()),
-    hasAge: !!(draft.patient?.age && draft.patient.age > 0),
-    hasMedsLength: draft.medicines.length > 0,
-    hasValidMed: draft.medicines.some(m => m.name?.trim()),
-    canFinalize 
-  });
+  const canFinalize = canFinalizeDraft(draft);
 
   async function handleSend(text: string) {
     // Add user message
@@ -132,18 +142,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
       const result = await parsePrescriptionUpdate(provider, apiKey, currentDraft, { type: 'text', text });
 
       // Merge result into draft
-      const newDraft: PrescriptionDraft = {
-        patient: {
-          name: result.patient?.name || draft.patient?.name,
-          age: result.patient?.age ?? draft.patient?.age,
-          gender: result.patient?.gender || draft.patient?.gender,
-        },
-        diagnosis: result.diagnosis || draft.diagnosis,
-        medicines: (result.medicines && result.medicines.length > 0) ? result.medicines : draft.medicines,
-        lab_tests: (result.lab_tests && result.lab_tests.length > 0) ? result.lab_tests : draft.lab_tests,
-        notes: result.notes || draft.notes,
-        follow_up_questions: result.follow_up_questions || [],
-      };
+      const newDraft: PrescriptionDraft = mergeDraft(draft, result);
       setDraft(newDraft);
 
       // Replace typing with AI response
