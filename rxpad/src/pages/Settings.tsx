@@ -13,6 +13,8 @@ import { startOAuthFlow, testOpenRouterKey } from '../lib/openrouter';
 import type { DoctorProfile } from '../schemas/profile';
 import type { SignatureFont, SignatureStyle } from '../lib/signature';
 
+declare const __APP_VERSION__: string;
+
 export function Settings({ path: _path }: { path?: string }) {
   const [provider, setProvider] = useState<AIProvider>('gemini');
   const [geminiApiKey, setGeminiApiKey] = useState('');
@@ -151,9 +153,15 @@ export function Settings({ path: _path }: { path?: string }) {
 
   return (
     <Shell activeTab="/settings">
-      <div class="p-4 max-w-lg mx-auto">
-        <h1 class="text-xl font-bold text-gray-900 mb-6">Settings</h1>
+      <div class="p-4 max-w-lg mx-auto pb-12">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-xl font-bold text-gray-900">Settings</h1>
+          <span class="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+            v{__APP_VERSION__}
+          </span>
+        </div>
 
+        {/* AI Provider Section */}
         <section class="bg-white rounded-xl border p-4 mb-4">
           <h2 class="font-semibold text-gray-800 mb-3">AI Provider</h2>
 
