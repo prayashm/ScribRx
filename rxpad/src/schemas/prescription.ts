@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const MedicineSchema = z.object({
   name: z.string().describe('Medicine name — Indian brand name or generic name'),
+  genericName: z.string().optional().describe('Generic (INN) name of the medicine, e.g. "Paracetamol" for Dolo, "Amoxicillin" for Mox. Always provide if a brand name is used. Leave empty only if already generic.'),
   dosage: z.string().optional().describe('Dosage amount, e.g. "500mg", "650mg", "10ml". Leave empty if not mentioned.'),
   frequency: z.string().optional().describe('Dosing frequency. Indian convention: "1-0-1" means morning-skip-evening. Also accept: OD, BD, TDS, SOS, HS. Leave empty if not mentioned.'),
   duration: z.string().optional().describe('Duration of course, e.g. "3 days", "5 days", "1 week". Leave empty if not mentioned.'),
@@ -17,6 +18,7 @@ export const PatientSchema = z.object({
 
 export const PrescriptionDraftSchema = z.object({
   patient: PatientSchema.default({}),
+  diagnosis: z.string().optional().describe('Clinical diagnosis or provisional diagnosis, e.g. "Acute pharyngitis", "Type 2 DM", "URTI". Leave empty if not mentioned.'),
   medicines: z.array(MedicineSchema).default([]).describe('List of prescribed medicines'),
   lab_tests: z.array(z.string()).default([]).describe('Lab tests to order, e.g. "CBC", "Lipid Profile", "HbA1c"'),
   notes: z.string().optional().describe('Additional instructions for the patient'),
@@ -34,6 +36,7 @@ export interface Prescription {
   finalizedAt?: string;
   cancelledAt?: string;
   patient: Patient;
+  diagnosis?: string;
   medicines: Medicine[];
   labTests: string[];
   notes?: string;

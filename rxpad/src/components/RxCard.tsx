@@ -9,11 +9,12 @@ interface Props {
 
 export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
   const hasPatient = draft.patient?.name || draft.patient?.age;
+  const hasDiagnosis = !!draft.diagnosis;
   const hasMeds = draft.medicines && draft.medicines.length > 0 && draft.medicines.some(m => m.name);
   const hasTests = draft.lab_tests && draft.lab_tests.length > 0;
   const hasNotes = !!draft.notes;
 
-  if (!hasPatient && !hasMeds && !hasTests && !hasNotes) return null;
+  if (!hasPatient && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes) return null;
 
   return (
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -27,6 +28,14 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
         </div>
       )}
 
+      {/* Diagnosis */}
+      {hasDiagnosis && (
+        <div class="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+          <span class="text-sm">🩺</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">Dx:</span> {draft.diagnosis}</span>
+        </div>
+      )}
+
       {/* Medicines */}
       {hasMeds && (
         <div class="px-3 py-2 space-y-1">
@@ -35,6 +44,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
               <span class="text-sm shrink-0">💊</span>
               <div class="text-sm text-gray-700">
                 <span class="font-medium">{med.name}</span>
+                {med.genericName && <span class="text-blue-600 text-xs ml-1">({med.genericName})</span>}
                 {med.dosage && <span class="text-gray-500"> {med.dosage}</span>}
                 {(med.frequency || med.duration) && (
                   <span class="text-gray-400">

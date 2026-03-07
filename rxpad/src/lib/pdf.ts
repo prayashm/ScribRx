@@ -54,7 +54,17 @@ export async function generatePrescriptionPDF(
 
   y += 3;
   doc.line(margin, y, pageW - margin, y);
-  y += 7;
+  y += 6;
+
+  // ── Diagnosis ──
+  if (rx.diagnosis) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Dx:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(rx.diagnosis, margin + 9, y);
+    y += 6;
+  }
 
   // ── Rx Symbol ──
   doc.setFontSize(18);
@@ -72,6 +82,15 @@ export async function generatePrescriptionPDF(
     doc.setFont('helvetica', 'bold');
     doc.text(`${i + 1}.`, margin, y);
     doc.text(med.name, margin + 6, y);
+
+    // Generic name in parentheses
+    if (med.genericName) {
+      const nameWidth = doc.getTextWidth(med.name);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.text(`(${med.genericName})`, margin + 6 + nameWidth + 2, y);
+      doc.setFontSize(8.5);
+    }
 
     doc.setFont('helvetica', 'normal');
     const details = [med.dosage, med.frequency, med.duration].filter(Boolean).join('  |  ');
