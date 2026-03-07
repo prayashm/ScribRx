@@ -2,10 +2,6 @@ import { generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 
 const OPENROUTER_AUTH_URL = 'https://openrouter.ai/auth';
-const OPENROUTER_TOKEN_ENDPOINTS = [
-  'https://openrouter.ai/api/v1/auth/token',
-  'https://openrouter.ai/api/v1/oauth/token',
-] as const;
 const OPENROUTER_MODEL = 'google/gemini-2.0-flash-001';
 
 const PKCE_VERIFIER_KEY = 'openrouter_pkce_verifier';
@@ -46,11 +42,6 @@ export async function startOAuthFlow(options?: {
   scope?: string;
   returnPath?: string;
 }): Promise<void> {
-  const clientId = options?.clientId ?? import.meta.env.VITE_OPENROUTER_CLIENT_ID;
-  if (!clientId) {
-    throw new Error('Missing OpenRouter client ID. Set VITE_OPENROUTER_CLIENT_ID.');
-  }
-
   const redirectUri = options?.redirectUri ?? `${window.location.origin}/auth/callback`;
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -61,9 +52,7 @@ export async function startOAuthFlow(options?: {
   sessionStorage.setItem(PKCE_RETURN_PATH_KEY, options?.returnPath ?? window.location.pathname);
 
   const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
+    callback_url: redirectUri,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     state,
@@ -117,30 +106,17 @@ export async function exchangeCode(options: {
   clientId?: string;
   redirectUri?: string;
 }): Promise<{ accessToken: string; returnPath: string }> {
-  const clientId = options.clientId ?? import.meta.env.VITE_OPENROUTER_CLIENT_ID;
-  if (!clientId) {
-    throw new Error('Missing OpenRouter client ID. Set VITE_OPENROUTER_CLIENT_ID.');
-  }
-
   const codeVerifier = readAndValidatePKCEState(options.state);
-  const redirectUri = options.redirectUri ?? `${window.location.origin}/auth/callback`;
   const returnPath = sessionStorage.getItem(PKCE_RETURN_PATH_KEY) || '/settings';
 
   const payload = {
-    grant_type: 'authorization_code',
-    client_id: clientId,
     code: options.code,
     code_verifier: codeVerifier,
-    redirect_uri: redirectUri,
+    code_challenge_method: 'S256',
   };
 
-  let token: string | null = null;
-  for (const endpoint of OPENROUTER_TOKEN_ENDPOINTS) {
-    const data = await exchangeAtEndpoint(endpoint, payload);
-    if (!data) continue;
-    token = data.access_token || data.api_key || data.key || null;
-    if (token) break;
-  }
+  const data = await exchangeAtEndpoint('https://openrouter.ai/api/v1/auth/keys', payload);
+  const token = data?.key || data?.api_key || data?.access_token || null;
 
   sessionStorage.removeItem(PKCE_VERIFIER_KEY);
   sessionStorage.removeItem(PKCE_STATE_KEY);
