@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.34",
+    "@ai-sdk/openai": "^3.0.41",
     "ai": "^6.0.105",
     "idb": "^8.0.3",
     "jspdf": "^4.2.0",
