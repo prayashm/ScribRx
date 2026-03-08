@@ -30,26 +30,81 @@ interface Props {
   editDraft?: Prescription;
 }
 
+const PLACEHOLDER_VALUES = new Set(['string', 'unknown', 'undefined', 'null', 'n/a', 'na', 'none']);
+
+function isMeaningful(value?: string): value is string {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !PLACEHOLDER_VALUES.has(trimmed.toLowerCase());
+}
+
+function cleanText(value?: string): string | undefined {
+  return isMeaningful(value) ? value.trim() : undefined;
+}
+
+function cleanStringList(values?: string[]): string[] {
+  if (!Array.isArray(values)) return [];
+  return values.map((v) => v?.trim?.() || '').filter((v) => isMeaningful(v));
+}
+
+function normalizeAge(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (!/^\d+$/.test(trimmed)) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
 export function mergeDraft(current: PrescriptionDraft, result: PrescriptionDraft): PrescriptionDraft {
+  const incomingAge = normalizeAge((result.patient as { age?: unknown } | undefined)?.age);
+  const currentAge = normalizeAge((current.patient as { age?: unknown } | undefined)?.age);
+  const incomingMeds = Array.isArray(result.medicines)
+    ? result.medicines
+      .map((med) => ({
+        ...med,
+        name: med.name?.trim?.() || '',
+        genericName: cleanText(med.genericName),
+        dosage: cleanText(med.dosage),
+        frequency: cleanText(med.frequency),
+        duration: cleanText(med.duration),
+        instructions: cleanText(med.instructions),
+      }))
+      .filter((med) => isMeaningful(med.name))
+    : undefined;
+  const incomingTests = Array.isArray(result.lab_tests) ? cleanStringList(result.lab_tests) : undefined;
+  const incomingQuestions = Array.isArray(result.follow_up_questions) ? cleanStringList(result.follow_up_questions) : undefined;
+
   return {
     patient: {
-      name: result.patient?.name || current.patient?.name,
-      age: result.patient?.age ?? current.patient?.age,
+      name: cleanText(result.patient?.name) || cleanText(current.patient?.name),
+      age: incomingAge ?? currentAge,
       gender: result.patient?.gender || current.patient?.gender,
+      phone: cleanText(result.patient?.phone) || cleanText(current.patient?.phone),
     },
-    diagnosis: result.diagnosis || current.diagnosis,
-    medicines: (result.medicines && result.medicines.length > 0) ? result.medicines : current.medicines,
-    lab_tests: (result.lab_tests && result.lab_tests.length > 0) ? result.lab_tests : current.lab_tests,
-    notes: result.notes || current.notes,
-    follow_up_questions: result.follow_up_questions || [],
+    diagnosis: cleanText(result.diagnosis) || cleanText(current.diagnosis),
+    medicines: incomingMeds && incomingMeds.length > 0 ? incomingMeds : current.medicines,
+    lab_tests: incomingTests && incomingTests.length > 0 ? incomingTests : current.lab_tests,
+    notes: cleanText(result.notes) || cleanText(current.notes),
+    follow_up_questions: incomingQuestions !== undefined
+      ? (incomingQuestions.length > 0 ? incomingQuestions : (current.follow_up_questions || []))
+      : (current.follow_up_questions || []),
   };
 }
 
 export function canFinalizeDraft(draft: PrescriptionDraft): boolean {
-  return !!(draft.patient?.name?.trim()) &&
-    !!(draft.patient?.age && draft.patient.age > 0) &&
-    draft.medicines.length > 0 &&
-    draft.medicines.some(m => m.name?.trim());
+  const hasPatientName = isMeaningful(draft.patient?.name);
+  const hasValidAge = normalizeAge((draft.patient as { age?: unknown } | undefined)?.age) !== undefined;
+  const totalMeds = draft.medicines?.length || 0;
+  const validMeds = (draft.medicines || []).filter((m) => isMeaningful(m.name)).length;
+  return hasPatientName && hasValidAge && totalMeds > 0 && validMeds === totalMeds;
 }
 
 let msgId = 0;
@@ -182,7 +237,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
         finalizedAt: now,
         patient: {
           name: draft.patient.name?.trim() || '',
-          age: draft.patient.age || 0,
+          age: normalizeAge((draft.patient as { age?: unknown } | undefined)?.age) || 0,
           gender: draft.patient.gender || 'M',
         },
         diagnosis: draft.diagnosis?.trim() || undefined,

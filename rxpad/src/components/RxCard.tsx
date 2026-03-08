@@ -7,12 +7,42 @@ interface Props {
   finalizing?: boolean;
 }
 
+const PLACEHOLDER_VALUES = new Set(['string', 'unknown', 'undefined', 'null', 'n/a', 'na', 'none']);
+
+function isMeaningful(value?: string): value is string {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !PLACEHOLDER_VALUES.has(trimmed.toLowerCase());
+}
+
+function cleanText(value?: string): string | undefined {
+  return isMeaningful(value) ? value.trim() : undefined;
+}
+
 export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
-  const hasPatient = draft.patient?.name || draft.patient?.age;
-  const hasDiagnosis = !!draft.diagnosis;
-  const hasMeds = draft.medicines && draft.medicines.length > 0 && draft.medicines.some(m => m.name);
-  const hasTests = draft.lab_tests && draft.lab_tests.length > 0;
-  const hasNotes = !!draft.notes;
+  const patientName = cleanText(draft.patient?.name);
+  const diagnosis = cleanText(draft.diagnosis);
+  const notes = cleanText(draft.notes);
+  const labTests = (draft.lab_tests || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test));
+  const medicines = (draft.medicines || [])
+    .map((med) => ({
+      ...med,
+      name: cleanText(med.name) || '',
+      genericName: cleanText(med.genericName),
+      dosage: cleanText(med.dosage),
+      frequency: cleanText(med.frequency),
+      duration: cleanText(med.duration),
+      instructions: cleanText(med.instructions),
+    }))
+    .filter((med) => isMeaningful(med.name));
+
+  const patientAge = draft.patient?.age;
+  const patientGender = draft.patient?.gender;
+  const hasPatient = !!patientName || !!patientAge;
+  const hasDiagnosis = !!diagnosis;
+  const hasMeds = medicines.length > 0;
+  const hasTests = labTests.length > 0;
+  const hasNotes = !!notes;
 
   if (!hasPatient && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes) return null;
 
@@ -23,7 +53,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
         <div class="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
           <span class="text-sm">👤</span>
           <span class="text-sm font-medium text-gray-800">
-            {draft.patient.name || 'Unknown'}{draft.patient.age ? `, ${draft.patient.age}${draft.patient.gender ? draft.patient.gender : ''}` : ''}
+            {patientName || 'Unknown'}{patientAge ? `, ${patientAge}${patientGender ? patientGender : ''}` : ''}
           </span>
         </div>
       )}
@@ -32,14 +62,14 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
       {hasDiagnosis && (
         <div class="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
           <span class="text-sm">🩺</span>
-          <span class="text-sm text-gray-700"><span class="font-medium">Dx:</span> {draft.diagnosis}</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">Dx:</span> {diagnosis}</span>
         </div>
       )}
 
       {/* Medicines */}
       {hasMeds && (
         <div class="px-3 py-2 space-y-1">
-          {draft.medicines.filter(m => m.name).map((med, i) => (
+          {medicines.map((med, i) => (
             <div key={i} class="flex items-start gap-2">
               <span class="text-sm shrink-0">💊</span>
               <div class="text-sm text-gray-700">
@@ -52,7 +82,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
                   </span>
                 )}
                 {med.instructions && (
-                  <span class="text-gray-400 italic"> — {med.instructions}</span>
+                  <span class="text-gray-400 italic"> - {med.instructions}</span>
                 )}
               </div>
             </div>
@@ -65,7 +95,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
         <div class="px-3 py-2 border-t border-gray-100">
           <div class="flex items-start gap-2">
             <span class="text-sm">🔬</span>
-            <span class="text-sm text-gray-700">{draft.lab_tests.join(', ')}</span>
+            <span class="text-sm text-gray-700">{labTests.join(', ')}</span>
           </div>
         </div>
       )}
@@ -75,7 +105,7 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
         <div class="px-3 py-2 border-t border-gray-100">
           <div class="flex items-start gap-2">
             <span class="text-sm">📝</span>
-            <span class="text-sm text-gray-600 italic">{draft.notes}</span>
+            <span class="text-sm text-gray-600 italic">{notes}</span>
           </div>
         </div>
       )}
