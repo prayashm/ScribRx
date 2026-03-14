@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { mergeDraft, canFinalizeDraft } from '../pages/NewRx';
-import type { PrescriptionDraft } from '../schemas/prescription';
+import { PrescriptionDraftDefault, type PrescriptionDraft } from '../schemas/prescription';
 
 describe('NewRx draft merging and finalize checks', () => {
   it('preserves existing medicines on diagnosis-only updates', () => {
     const current: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ravi', age: 32, gender: 'M' },
       medicines: [{ name: 'Dolo 650', dosage: '650mg' }],
       lab_tests: ['CBC'],
@@ -12,11 +13,9 @@ describe('NewRx draft merging and finalize checks', () => {
     };
 
     const update: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: {},
       diagnosis: 'Viral Fever',
-      medicines: [],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const merged = mergeDraft(current, update);
@@ -29,17 +28,14 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('preserves patient when update only contains medicines', () => {
     const current: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ayush', age: 30, gender: 'M' },
-      medicines: [],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const update: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: {},
       medicines: [{ name: 'Azee 500', genericName: 'Azithromycin' }],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const merged = mergeDraft(current, update);
@@ -50,6 +46,7 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('handles undefined arrays without wiping existing data', () => {
     const current: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ravi', age: 32, gender: 'M' },
       diagnosis: 'URTI',
       medicines: [{ name: 'Dolo 650' }],
@@ -63,7 +60,7 @@ describe('NewRx draft merging and finalize checks', () => {
       medicines: undefined as unknown as PrescriptionDraft['medicines'],
       lab_tests: undefined as unknown as PrescriptionDraft['lab_tests'],
       follow_up_questions: undefined as unknown as PrescriptionDraft['follow_up_questions'],
-    });
+    } as PrescriptionDraft);
 
     expect(merged.medicines).toEqual(current.medicines);
     expect(merged.lab_tests).toEqual(current.lab_tests);
@@ -72,10 +69,9 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('finalize checks all critical invalid states', () => {
     const base: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ravi', age: 32, gender: 'M' },
       medicines: [{ name: 'Dolo 650', dosage: '650mg' }],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     expect(canFinalizeDraft(base)).toBe(true);
@@ -110,10 +106,9 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('rejects placeholder patient and medicine names', () => {
     const draft: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'unknown', age: 32, gender: 'M' },
       medicines: [{ name: 'string', dosage: '650mg' }],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     expect(canFinalizeDraft(draft)).toBe(false);
@@ -121,20 +116,18 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('merge replaces medicines when update adds/removes entries', () => {
     const current: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ravi', age: 32, gender: 'M' },
       medicines: [
         { name: 'Dolo 650', dosage: '650mg' },
         { name: 'Azee 500', dosage: '500mg' },
       ],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const update: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: {},
       medicines: [{ name: 'Azee 500', dosage: '500mg' }, { name: 'Pan 40', dosage: '40mg' }],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const merged = mergeDraft(current, update);
@@ -143,10 +136,9 @@ describe('NewRx draft merging and finalize checks', () => {
 
   it('merge keeps existing age when update age is non-numeric text', () => {
     const current: PrescriptionDraft = {
+      ...PrescriptionDraftDefault,
       patient: { name: 'Ravi', age: 28, gender: 'M' },
       medicines: [{ name: 'Dolo 650' }],
-      lab_tests: [],
-      follow_up_questions: [],
     };
 
     const update = {

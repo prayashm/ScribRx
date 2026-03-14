@@ -21,10 +21,11 @@ function cleanText(value?: string): string | undefined {
 
 export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
   const patientName = cleanText(draft.patient?.name);
-  const complaints = cleanText(draft.complaints);
-  const symptoms = cleanText(draft.symptoms);
-  const examination = cleanText(draft.examination);
   const diagnosis = cleanText(draft.diagnosis);
+  const complaints = (draft.complaints || []).map((c) => c?.trim?.() || '').filter((c) => isMeaningful(c));
+  const symptoms = (draft.symptoms || []).map((s) => s?.trim?.() || '').filter((s) => isMeaningful(s));
+  const signs = (draft.signs || []).map((s) => s?.trim?.() || '').filter((s) => isMeaningful(s));
+  const examination = cleanText(draft.examination);
   const notes = cleanText(draft.notes);
   const labTests = (draft.lab_tests || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test));
   const medicines = (draft.medicines || [])
@@ -42,15 +43,16 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
   const patientAge = draft.patient?.age;
   const patientGender = draft.patient?.gender;
   const hasPatient = !!patientName || !!patientAge;
-  const hasComplaints = !!complaints;
-  const hasSymptoms = !!symptoms;
-  const hasExamination = !!examination;
   const hasDiagnosis = !!diagnosis;
+  const hasComplaints = complaints.length > 0;
+  const hasSymptoms = symptoms.length > 0;
+  const hasSigns = signs.length > 0;
+  const hasExamination = !!examination;
   const hasMeds = medicines.length > 0;
   const hasTests = labTests.length > 0;
   const hasNotes = !!notes;
 
-  if (!hasPatient && !hasComplaints && !hasSymptoms && !hasExamination && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes) return null;
+  if (!hasPatient && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes && !hasComplaints && !hasSymptoms && !hasSigns && !hasExamination) return null;
 
   return (
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -64,27 +66,35 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
         </div>
       )}
 
-      {/* Complaints */}
-      {hasComplaints && (
-        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
-          <span class="text-sm shrink-0">💬</span>
-          <span class="text-sm text-gray-700"><span class="font-medium">C/O:</span> {complaints}</span>
-        </div>
-      )}
-
-      {/* Symptoms & Signs */}
-      {hasSymptoms && (
-        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
-          <span class="text-sm shrink-0">🌡️</span>
-          <span class="text-sm text-gray-700"><span class="font-medium">S/S:</span> {symptoms}</span>
+      {/* Complaints, Symptoms, Signs */}
+      {(hasComplaints || hasSymptoms || hasSigns) && (
+        <div class="px-3 py-2 border-b border-gray-100 space-y-1">
+          {hasComplaints && (
+            <div class="flex items-start gap-2">
+              <span class="text-sm shrink-0">🚩</span>
+              <span class="text-sm text-gray-700"><span class="font-medium">Complaints:</span> {complaints.join(', ')}</span>
+            </div>
+          )}
+          {hasSymptoms && (
+            <div class="flex items-start gap-2">
+              <span class="text-sm shrink-0">🤒</span>
+              <span class="text-sm text-gray-700"><span class="font-medium">Symptoms:</span> {symptoms.join(', ')}</span>
+            </div>
+          )}
+          {hasSigns && (
+            <div class="flex items-start gap-2">
+              <span class="text-sm shrink-0">🔍</span>
+              <span class="text-sm text-gray-700"><span class="font-medium">Signs:</span> {signs.join(', ')}</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* Examination */}
       {hasExamination && (
-        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
-          <span class="text-sm shrink-0">🔍</span>
-          <span class="text-sm text-gray-700"><span class="font-medium">O/E:</span> {examination}</span>
+        <div class="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+          <span class="text-sm">📏</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">Exam:</span> {examination}</span>
         </div>
       )}
 

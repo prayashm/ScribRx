@@ -72,6 +72,39 @@ export function PrescriptionView({ rx, onCancel, onShare, onContinueEdit, onBack
         )}
 
         <div class="border-t pt-3">
+          {(rx.complaints?.length || 0) > 0 && (
+            <div class="mb-2">
+              <h3 class="font-semibold text-xs text-gray-500 uppercase tracking-wider mb-1">Complaints</h3>
+              <p class="text-sm text-gray-700">{rx.complaints?.join(', ')}</p>
+            </div>
+          )}
+          {(rx.symptoms?.length || 0) > 0 && (
+            <div class="mb-2">
+              <h3 class="font-semibold text-xs text-gray-500 uppercase tracking-wider mb-1">Symptoms</h3>
+              <p class="text-sm text-gray-700">{rx.symptoms?.join(', ')}</p>
+            </div>
+          )}
+          {(rx.signs?.length || 0) > 0 && (
+            <div class="mb-2">
+              <h3 class="font-semibold text-xs text-gray-500 uppercase tracking-wider mb-1">Clinical Signs</h3>
+              <p class="text-sm text-gray-700">{rx.signs?.join(', ')}</p>
+            </div>
+          )}
+          {rx.examination && (
+            <div class="mb-2">
+              <h3 class="font-semibold text-xs text-gray-500 uppercase tracking-wider mb-1">Examination</h3>
+              <p class="text-sm text-gray-700">{rx.examination}</p>
+            </div>
+          )}
+          {rx.diagnosis && (
+            <div class="mb-2">
+              <h3 class="font-semibold text-xs text-gray-500 uppercase tracking-wider mb-1">Diagnosis</h3>
+              <p class="text-sm text-gray-700">{rx.diagnosis}</p>
+            </div>
+          )}
+        </div>
+
+        <div class="border-t pt-3">
           <h3 class="font-semibold text-sm text-gray-700 mb-2">{'\u211E'} Medicines</h3>
           {rx.medicines.map((med, i) => (
             <div key={i} class="mb-2 pl-4">

@@ -13,7 +13,7 @@ import {
 import { generatePrescriptionPDF } from '../lib/pdf';
 import { signPrescription, generateQRCode } from '../lib/qr';
 import { parsePrescriptionUpdate, type AIProvider } from '../lib/gemini';
-import type { Prescription, PrescriptionDraft } from '../schemas/prescription';
+import { PrescriptionDraftDefault, type Prescription, type PrescriptionDraft } from '../schemas/prescription';
 import type { DoctorProfile } from '../schemas/profile';
 
 interface ChatMessage {
@@ -80,6 +80,9 @@ export function mergeDraft(current: PrescriptionDraft, result: PrescriptionDraft
       .filter((med) => isMeaningful(med.name))
     : undefined;
   const incomingTests = Array.isArray(result.lab_tests) ? cleanStringList(result.lab_tests) : undefined;
+  const incomingComplaints = Array.isArray(result.complaints) ? cleanStringList(result.complaints) : undefined;
+  const incomingSymptoms = Array.isArray(result.symptoms) ? cleanStringList(result.symptoms) : undefined;
+  const incomingSigns = Array.isArray(result.signs) ? cleanStringList(result.signs) : undefined;
   const incomingQuestions = Array.isArray(result.follow_up_questions) ? cleanStringList(result.follow_up_questions) : undefined;
 
   return {
@@ -89,8 +92,9 @@ export function mergeDraft(current: PrescriptionDraft, result: PrescriptionDraft
       gender: result.patient?.gender || current.patient?.gender,
       phone: cleanText(result.patient?.phone) || cleanText(current.patient?.phone),
     },
-    complaints: cleanText(result.complaints) || cleanText(current.complaints),
-    symptoms: cleanText(result.symptoms) || cleanText(current.symptoms),
+    complaints: incomingComplaints && incomingComplaints.length > 0 ? incomingComplaints : current.complaints,
+    symptoms: incomingSymptoms && incomingSymptoms.length > 0 ? incomingSymptoms : current.symptoms,
+    signs: incomingSigns && incomingSigns.length > 0 ? incomingSigns : current.signs,
     examination: cleanText(result.examination) || cleanText(current.examination),
     diagnosis: cleanText(result.diagnosis) || cleanText(current.diagnosis),
     medicines: incomingMeds && incomingMeds.length > 0 ? incomingMeds : current.medicines,
@@ -114,15 +118,7 @@ let msgId = 0;
 
 export function NewRx({ editDraft: _editDraft }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState<PrescriptionDraft>({
-    patient: {},
-    medicines: [],
-    lab_tests: [],
-    follow_up_questions: [],
-    complaints: undefined,
-    symptoms: undefined,
-    examination: undefined,
-  });
+  const [draft, setDraft] = useState<PrescriptionDraft>(PrescriptionDraftDefault);
   const [aiLoading, setAiLoading] = useState(false);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [provider, setProvider] = useState<AIProvider>('gemini');
@@ -246,8 +242,9 @@ export function NewRx({ editDraft: _editDraft }: Props) {
           age: normalizeAge((draft.patient as { age?: unknown } | undefined)?.age) || 0,
           gender: draft.patient.gender || 'M',
         },
-        complaints: draft.complaints?.trim() || undefined,
-        symptoms: draft.symptoms?.trim() || undefined,
+        complaints: draft.complaints?.map(c => c.trim()).filter(Boolean) || [],
+        symptoms: draft.symptoms?.map(s => s.trim()).filter(Boolean) || [],
+        signs: draft.signs?.map(s => s.trim()).filter(Boolean) || [],
         examination: draft.examination?.trim() || undefined,
         diagnosis: draft.diagnosis?.trim() || undefined,
         medicines: draft.medicines.filter(m => m.name?.trim()),
@@ -303,7 +300,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
       role: 'ai',
       text: profile ? `Hi Dr. ${profile.fullName.split(' ')[0]}! 👋 Ready for a new prescription.` : 'Ready for a new prescription.',
     }]);
-    setDraft({ patient: {}, medicines: [], lab_tests: [], follow_up_questions: [], complaints: undefined, symptoms: undefined, examination: undefined });
+    setDraft(PrescriptionDraftDefault);
     setFinalized(null);
   }
 

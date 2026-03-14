@@ -66,8 +66,9 @@ function sanitizeDraft(draft: PrescriptionDraft): PrescriptionDraft {
       gender: draft.patient?.gender,
       phone: cleanText(draft.patient?.phone),
     },
-    complaints: cleanText(draft.complaints),
-    symptoms: cleanText(draft.symptoms),
+    complaints: (draft.complaints || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test)),
+    symptoms: (draft.symptoms || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test)),
+    signs: (draft.signs || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test)),
     examination: cleanText(draft.examination),
     diagnosis: cleanText(draft.diagnosis),
     medicines: (draft.medicines || [])
@@ -123,27 +124,25 @@ const SYSTEM_PROMPT = `You are a medical prescription assistant for qualified In
 You parse the doctor's voice notes or text messages into structured prescription data.
 
 Rules:
-- Extract both the diagnosis AND the medicines. Do not omit medicines when a diagnosis is provided.
+- Clinical Info Extraction:
+    * Complaints: Patient's reported issues (e.g., "Fever for 2 days", "Body ache").
+    * Symptoms: Specific clinical symptoms mentioned (e.g., "Nausea", "Fatigue").
+    * Signs: Clinical signs found by the doctor (e.g., "Pallor", "Icterus").
+    * Examination: Physical findings (e.g., "BP 120/80", "Chest clear").
+    * Diagnosis: The provisional or final clinical diagnosis (e.g., "Acute pharyngitis").
+- Medicines: Do not omit medicines when clinical info is provided. Merge updates with the current state.
 - Name Age Gender pattern: if text looks like "Name Age Gender" (example: "Ayush 30 M"), treat it as patient demographics.
 - Do not interpret demographics as medicine names or dosages.
-- If demographic text could also be read as medicine data, keep medicine empty and add a short follow_up_questions clarification.
-- Use Indian medicine naming conventions (brand names like Azee, Dolo, Crocin are valid)
-- When a brand name is used, ALWAYS fill in the genericName field with the INN/generic equivalent (e.g. Dolo -> Paracetamol, Azee -> Azithromycin, Crocin -> Paracetamol, Mox -> Amoxicillin). If the doctor already used the generic name, leave genericName empty.
-- Extract complaints if the doctor mentions what the patient is complaining about in their own words (e.g. "patient complains of fever and cold for 2 days", "c/o headache"). Do not invent complaints.
-- Extract symptoms if the doctor mentions clinical symptoms and signs (e.g. "temp 102F", "pharyngeal erythema", "mild wheeze on auscultation"). Do not invent symptoms.
-- Extract examination findings if the doctor mentions them (e.g. "throat red, tonsils grade 2", "BP 130/80 mmHg, chest clear"). Do not invent examination findings.
-- Extract diagnosis if the doctor mentions it (e.g. "URTI", "acute pharyngitis", "viral fever"). Do not invent a diagnosis.
-- "1-0-1" means morning-skip-evening. "0-0-1" means evening only. Interpret accordingly.
-- OD = once daily, BD = twice daily, TDS = thrice daily, QID = four times daily, SOS = as needed, HS = at bedtime
-- "x/7" notation: "3/7" means "3 days", "5/7" means "5 days", "2/52" means "2 weeks"
-- If the doctor says "Tab" assume tablet, "Cap" assume capsule, "Syp" assume syrup, "Inj" assume injection
-- Preserve ALL existing prescription data unless the doctor explicitly changes it
-- NEVER guess or invent information the doctor didn't say. Leave fields empty/omitted if not mentioned.
-- NEVER put explanations, reasoning, or meta-commentary in any field. Fields are for prescription data ONLY.
-- The 'notes' field is for patient-facing advice (e.g. 'Drink plenty of water'). Do NOT use it to explain your parsing decisions.
-- Partial prescriptions are fine - fill only what was said.
-- In follow_up_questions, ask about critical missing info (dosage, frequency, duration for medicines; patient name). Keep questions short and specific. Don't ask about optional fields like instructions unless clinically important.
-- If the doctor's message answers a previous question, merge the answer into the existing data.`;
+- Use Indian medicine naming conventions (brand names like Azee, Dolo, Crocin are valid).
+- When a brand name is used, ALWAYS fill in the genericName field with the INN/generic equivalent (e.g. Dolo -> Paracetamol).
+- "1-0-1" means morning-skip-evening.
+- OD = once daily, BD = twice daily, TDS = thrice daily, QID = four times daily, SOS = as needed, HS = at bedtime.
+- "x/7" notation: "3/7" means "3 days".
+- Preserve ALL existing prescription data unless the doctor explicitly changes it.
+- NEVER guess or invent information. Leave fields empty if not mentioned.
+- NEVER put explanations or reasoning in any field.
+- The 'notes' field is for patient-facing advice (e.g. 'Drink plenty of water').
+- In follow_up_questions, ask about critical missing info (dosage, frequency, duration; patient name).`;
 
 export async function parsePrescriptionUpdate(
   provider: AIProvider,

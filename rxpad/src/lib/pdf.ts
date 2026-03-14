@@ -56,46 +56,52 @@ export async function generatePrescriptionPDF(
   doc.line(margin, y, pageW - margin, y);
   y += 6;
 
-  // ── Complaints ──
-  if (rx.complaints) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('C/O:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    const complaintsLines = doc.splitTextToSize(rx.complaints, contentW - 12);
-    doc.text(complaintsLines, margin + 11, y);
-    y += complaintsLines.length * 4 + 2;
-  }
+  // ── Clinical Info (Complaints, Symptoms, Signs, Examination) ──
+  doc.setFontSize(8.5);
+  let hasClinical = false;
 
-  // ── Symptoms & Signs ──
-  if (rx.symptoms) {
-    doc.setFontSize(9);
+  if (rx.complaints && rx.complaints.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.text('S/S:', margin, y);
+    doc.text('Complaints:', margin, y);
     doc.setFont('helvetica', 'normal');
-    const symptomsLines = doc.splitTextToSize(rx.symptoms, contentW - 12);
-    doc.text(symptomsLines, margin + 11, y);
-    y += symptomsLines.length * 4 + 2;
+    doc.text(rx.complaints.join(', '), margin + 20, y);
+    y += 4.5;
+    hasClinical = true;
   }
-
-  // ── Examination ──
+  if (rx.symptoms && rx.symptoms.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Symptoms:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(rx.symptoms.join(', '), margin + 20, y);
+    y += 4.5;
+    hasClinical = true;
+  }
+  if (rx.signs && rx.signs.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Signs:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(rx.signs.join(', '), margin + 20, y);
+    y += 4.5;
+    hasClinical = true;
+  }
   if (rx.examination) {
-    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('O/E:', margin, y);
+    doc.text('Examination:', margin, y);
     doc.setFont('helvetica', 'normal');
-    const examinationLines = doc.splitTextToSize(rx.examination, contentW - 12);
-    doc.text(examinationLines, margin + 11, y);
-    y += examinationLines.length * 4 + 2;
+    const examLines = doc.splitTextToSize(rx.examination, contentW - 20);
+    doc.text(examLines, margin + 20, y);
+    y += examLines.length * 4.5;
+    hasClinical = true;
   }
 
+  if (hasClinical) y += 2;
   // ── Diagnosis ──
   if (rx.diagnosis) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Dx:', margin, y);
+    doc.text('Diagnosis:', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(rx.diagnosis, margin + 9, y);
+    doc.text(rx.diagnosis, margin + 20, y);
     y += 6;
   }
 

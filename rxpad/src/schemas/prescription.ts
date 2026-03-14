@@ -56,15 +56,26 @@ export const PatientSchema = z.object({
 
 export const PrescriptionDraftSchema = z.object({
   patient: PatientSchema.default({}),
-  complaints: OptionalStringSchema.describe('Chief complaints in patient\'s own words, e.g. "fever and sore throat for 3 days", "headache and vomiting". Leave empty if not mentioned.'),
-  symptoms: OptionalStringSchema.describe('Symptoms and signs observed, e.g. "fever 102F, pharyngeal erythema, mild tachycardia". Leave empty if not mentioned.'),
-  examination: OptionalStringSchema.describe('Clinical examination findings, e.g. "throat red, tonsils enlarged", "BP 130/80, chest clear". Optional - leave empty if not mentioned.'),
+  complaints: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Patient complaints / history in their own words, e.g. "Fever for 2 days", "Dry cough", "Sore throat". Leave empty if not mentioned.'),
+  symptoms: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Clinical symptoms noted by the doctor, e.g. "Fatigue", "Loss of appetite", "Nausea". Leave empty if not mentioned.'),
+  signs: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Clinical signs observed, e.g. "Pallor", "Icterus", "Clubbing", "Cyanosis". Leave empty if not mentioned.'),
+  examination: OptionalStringSchema.describe('Physical examination findings (O/E), e.g. "Chest: clear", "Abdomen: soft", "Pulse: 80/min", "BP: 120/80 mmHg". Leave empty if not mentioned.'),
   diagnosis: OptionalStringSchema.describe('Clinical diagnosis or provisional diagnosis, e.g. "Acute pharyngitis", "Type 2 DM", "URTI". Leave empty if not mentioned.'),
   medicines: z.array(MedicineSchema).default([]).describe('List of prescribed medicines'),
   lab_tests: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Lab tests to order, e.g. "CBC", "Lipid Profile", "HbA1c"'),
   notes: OptionalStringSchema.describe('Additional instructions for the patient'),
   follow_up_questions: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Questions to ask the doctor about missing critical info. E.g. "What is the dosage for Amoxicillin?", "How many days should Paracetamol be taken?", "Patient name?". Only ask about genuinely missing info, not optional fields like instructions.'),
 });
+
+export const PrescriptionDraftDefault: PrescriptionDraft = {
+  patient: {},
+  complaints: [],
+  symptoms: [],
+  signs: [],
+  medicines: [],
+  lab_tests: [],
+  follow_up_questions: [],
+};
 
 export type Medicine = z.infer<typeof MedicineSchema>;
 export type Patient = z.infer<typeof PatientSchema>;
@@ -77,8 +88,9 @@ export interface Prescription {
   finalizedAt?: string;
   cancelledAt?: string;
   patient: Patient;
-  complaints?: string;
-  symptoms?: string;
+  complaints?: string[];
+  symptoms?: string[];
+  signs?: string[];
   examination?: string;
   diagnosis?: string;
   medicines: Medicine[];
