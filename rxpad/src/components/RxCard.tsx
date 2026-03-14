@@ -21,6 +21,9 @@ function cleanText(value?: string): string | undefined {
 
 export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
   const patientName = cleanText(draft.patient?.name);
+  const complaints = cleanText(draft.complaints);
+  const symptoms = cleanText(draft.symptoms);
+  const examination = cleanText(draft.examination);
   const diagnosis = cleanText(draft.diagnosis);
   const notes = cleanText(draft.notes);
   const labTests = (draft.lab_tests || []).map((test) => test?.trim?.() || '').filter((test) => isMeaningful(test));
@@ -39,12 +42,15 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
   const patientAge = draft.patient?.age;
   const patientGender = draft.patient?.gender;
   const hasPatient = !!patientName || !!patientAge;
+  const hasComplaints = !!complaints;
+  const hasSymptoms = !!symptoms;
+  const hasExamination = !!examination;
   const hasDiagnosis = !!diagnosis;
   const hasMeds = medicines.length > 0;
   const hasTests = labTests.length > 0;
   const hasNotes = !!notes;
 
-  if (!hasPatient && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes) return null;
+  if (!hasPatient && !hasComplaints && !hasSymptoms && !hasExamination && !hasDiagnosis && !hasMeds && !hasTests && !hasNotes) return null;
 
   return (
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -55,6 +61,30 @@ export function RxCard({ draft, canFinalize, onFinalize, finalizing }: Props) {
           <span class="text-sm font-medium text-gray-800">
             {patientName || 'Unknown'}{patientAge ? `, ${patientAge}${patientGender ? patientGender : ''}` : ''}
           </span>
+        </div>
+      )}
+
+      {/* Complaints */}
+      {hasComplaints && (
+        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
+          <span class="text-sm shrink-0">💬</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">C/O:</span> {complaints}</span>
+        </div>
+      )}
+
+      {/* Symptoms & Signs */}
+      {hasSymptoms && (
+        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
+          <span class="text-sm shrink-0">🌡️</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">S/S:</span> {symptoms}</span>
+        </div>
+      )}
+
+      {/* Examination */}
+      {hasExamination && (
+        <div class="px-3 py-2 border-b border-gray-100 flex items-start gap-2">
+          <span class="text-sm shrink-0">🔍</span>
+          <span class="text-sm text-gray-700"><span class="font-medium">O/E:</span> {examination}</span>
         </div>
       )}
 

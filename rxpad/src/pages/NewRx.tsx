@@ -89,6 +89,9 @@ export function mergeDraft(current: PrescriptionDraft, result: PrescriptionDraft
       gender: result.patient?.gender || current.patient?.gender,
       phone: cleanText(result.patient?.phone) || cleanText(current.patient?.phone),
     },
+    complaints: cleanText(result.complaints) || cleanText(current.complaints),
+    symptoms: cleanText(result.symptoms) || cleanText(current.symptoms),
+    examination: cleanText(result.examination) || cleanText(current.examination),
     diagnosis: cleanText(result.diagnosis) || cleanText(current.diagnosis),
     medicines: incomingMeds && incomingMeds.length > 0 ? incomingMeds : current.medicines,
     lab_tests: incomingTests && incomingTests.length > 0 ? incomingTests : current.lab_tests,
@@ -116,6 +119,9 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     medicines: [],
     lab_tests: [],
     follow_up_questions: [],
+    complaints: undefined,
+    symptoms: undefined,
+    examination: undefined,
   });
   const [aiLoading, setAiLoading] = useState(false);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
@@ -240,6 +246,9 @@ export function NewRx({ editDraft: _editDraft }: Props) {
           age: normalizeAge((draft.patient as { age?: unknown } | undefined)?.age) || 0,
           gender: draft.patient.gender || 'M',
         },
+        complaints: draft.complaints?.trim() || undefined,
+        symptoms: draft.symptoms?.trim() || undefined,
+        examination: draft.examination?.trim() || undefined,
         diagnosis: draft.diagnosis?.trim() || undefined,
         medicines: draft.medicines.filter(m => m.name?.trim()),
         labTests: draft.lab_tests || [],
@@ -294,7 +303,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
       role: 'ai',
       text: profile ? `Hi Dr. ${profile.fullName.split(' ')[0]}! 👋 Ready for a new prescription.` : 'Ready for a new prescription.',
     }]);
-    setDraft({ patient: {}, medicines: [], lab_tests: [], follow_up_questions: [] });
+    setDraft({ patient: {}, medicines: [], lab_tests: [], follow_up_questions: [], complaints: undefined, symptoms: undefined, examination: undefined });
     setFinalized(null);
   }
 

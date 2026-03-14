@@ -43,6 +43,34 @@ export function PrescriptionView({ rx, onCancel, onShare, onContinueEdit, onBack
           </div>
         </div>
 
+        {rx.complaints && (
+          <div class="border-t pt-3 mt-3">
+            <h3 class="font-semibold text-sm text-gray-700 mb-1">Complaints</h3>
+            <p class="text-sm text-gray-600">{rx.complaints}</p>
+          </div>
+        )}
+
+        {rx.symptoms && (
+          <div class="border-t pt-3 mt-3">
+            <h3 class="font-semibold text-sm text-gray-700 mb-1">Symptoms &amp; Signs</h3>
+            <p class="text-sm text-gray-600">{rx.symptoms}</p>
+          </div>
+        )}
+
+        {rx.examination && (
+          <div class="border-t pt-3 mt-3">
+            <h3 class="font-semibold text-sm text-gray-700 mb-1">Examination</h3>
+            <p class="text-sm text-gray-600">{rx.examination}</p>
+          </div>
+        )}
+
+        {rx.diagnosis && (
+          <div class="border-t pt-3 mt-3">
+            <h3 class="font-semibold text-sm text-gray-700 mb-1">Diagnosis</h3>
+            <p class="text-sm text-gray-600">{rx.diagnosis}</p>
+          </div>
+        )}
+
         <div class="border-t pt-3">
           <h3 class="font-semibold text-sm text-gray-700 mb-2">{'\u211E'} Medicines</h3>
           {rx.medicines.map((med, i) => (
