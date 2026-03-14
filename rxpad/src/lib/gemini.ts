@@ -66,6 +66,9 @@ function sanitizeDraft(draft: PrescriptionDraft): PrescriptionDraft {
       gender: draft.patient?.gender,
       phone: cleanText(draft.patient?.phone),
     },
+    complaints: cleanText(draft.complaints),
+    symptoms: cleanText(draft.symptoms),
+    examination: cleanText(draft.examination),
     diagnosis: cleanText(draft.diagnosis),
     medicines: (draft.medicines || [])
       .map((med) => ({
@@ -126,6 +129,9 @@ Rules:
 - If demographic text could also be read as medicine data, keep medicine empty and add a short follow_up_questions clarification.
 - Use Indian medicine naming conventions (brand names like Azee, Dolo, Crocin are valid)
 - When a brand name is used, ALWAYS fill in the genericName field with the INN/generic equivalent (e.g. Dolo -> Paracetamol, Azee -> Azithromycin, Crocin -> Paracetamol, Mox -> Amoxicillin). If the doctor already used the generic name, leave genericName empty.
+- Extract complaints if the doctor mentions what the patient is complaining about in their own words (e.g. "patient complains of fever and cold for 2 days", "c/o headache"). Do not invent complaints.
+- Extract symptoms if the doctor mentions clinical symptoms and signs (e.g. "temp 102F", "pharyngeal erythema", "mild wheeze on auscultation"). Do not invent symptoms.
+- Extract examination findings if the doctor mentions them (e.g. "throat red, tonsils grade 2", "BP 130/80 mmHg, chest clear"). Do not invent examination findings.
 - Extract diagnosis if the doctor mentions it (e.g. "URTI", "acute pharyngitis", "viral fever"). Do not invent a diagnosis.
 - "1-0-1" means morning-skip-evening. "0-0-1" means evening only. Interpret accordingly.
 - OD = once daily, BD = twice daily, TDS = thrice daily, QID = four times daily, SOS = as needed, HS = at bedtime

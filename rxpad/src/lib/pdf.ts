@@ -56,6 +56,39 @@ export async function generatePrescriptionPDF(
   doc.line(margin, y, pageW - margin, y);
   y += 6;
 
+  // ── Complaints ──
+  if (rx.complaints) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('C/O:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const complaintsLines = doc.splitTextToSize(rx.complaints, contentW - 12);
+    doc.text(complaintsLines, margin + 11, y);
+    y += complaintsLines.length * 4 + 2;
+  }
+
+  // ── Symptoms & Signs ──
+  if (rx.symptoms) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('S/S:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const symptomsLines = doc.splitTextToSize(rx.symptoms, contentW - 12);
+    doc.text(symptomsLines, margin + 11, y);
+    y += symptomsLines.length * 4 + 2;
+  }
+
+  // ── Examination ──
+  if (rx.examination) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('O/E:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const examinationLines = doc.splitTextToSize(rx.examination, contentW - 12);
+    doc.text(examinationLines, margin + 11, y);
+    y += examinationLines.length * 4 + 2;
+  }
+
   // ── Diagnosis ──
   if (rx.diagnosis) {
     doc.setFontSize(9);

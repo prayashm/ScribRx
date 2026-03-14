@@ -56,6 +56,9 @@ export const PatientSchema = z.object({
 
 export const PrescriptionDraftSchema = z.object({
   patient: PatientSchema.default({}),
+  complaints: OptionalStringSchema.describe('Chief complaints in patient\'s own words, e.g. "fever and sore throat for 3 days", "headache and vomiting". Leave empty if not mentioned.'),
+  symptoms: OptionalStringSchema.describe('Symptoms and signs observed, e.g. "fever 102F, pharyngeal erythema, mild tachycardia". Leave empty if not mentioned.'),
+  examination: OptionalStringSchema.describe('Clinical examination findings, e.g. "throat red, tonsils enlarged", "BP 130/80, chest clear". Optional - leave empty if not mentioned.'),
   diagnosis: OptionalStringSchema.describe('Clinical diagnosis or provisional diagnosis, e.g. "Acute pharyngitis", "Type 2 DM", "URTI". Leave empty if not mentioned.'),
   medicines: z.array(MedicineSchema).default([]).describe('List of prescribed medicines'),
   lab_tests: z.preprocess(normalizeStringList, z.array(z.string()).default([])).describe('Lab tests to order, e.g. "CBC", "Lipid Profile", "HbA1c"'),
@@ -74,6 +77,9 @@ export interface Prescription {
   finalizedAt?: string;
   cancelledAt?: string;
   patient: Patient;
+  complaints?: string;
+  symptoms?: string;
+  examination?: string;
   diagnosis?: string;
   medicines: Medicine[];
   labTests: string[];
