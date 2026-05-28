@@ -1,12 +1,24 @@
-import { useMemo } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { pb, pocketBaseEnabled } from '../lib/pb';
 
 interface VerifyProps {
   path?: string;
   data?: string;
+  id?: string;
 }
 
-export function Verify({ data }: VerifyProps) {
-  const payload = useMemo(() => {
+interface VerificationPayload {
+  rxId: string;
+  doctorName: string;
+  regNo: string;
+  date: string;
+  patientInitials: string;
+  status: string;
+}
+
+export function Verify({ data, id }: VerifyProps) {
+  // Legacy path: HMAC-signed payload embedded in the QR (?data=...).
+  const embedded = useMemo<VerificationPayload | null>(() => {
     if (!data) return null;
     try {
       return JSON.parse(atob(decodeURIComponent(data)));
@@ -15,13 +27,51 @@ export function Verify({ data }: VerifyProps) {
     }
   }, [data]);
 
+  // Cloud path: look the prescription up server-side by id (?id=RX-...).
+  const [loading, setLoading] = useState(!!id);
+  const [fetched, setFetched] = useState<VerificationPayload | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!pocketBaseEnabled) throw new Error('verification unavailable');
+        const res = await pb.send(`/api/verify/${encodeURIComponent(id)}`, { method: 'GET' });
+        if (!cancelled) setFetched(res as VerificationPayload);
+      } catch {
+        if (!cancelled) setFetched(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div class="min-h-screen flex items-center justify-center p-6 bg-gray-50">
+        <div class="text-center">
+          <div class="text-4xl mb-2">{'℞'}</div>
+          <p class="text-sm text-gray-400">Verifying…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const payload = id ? fetched : embedded;
+
   if (!payload) {
     return (
       <div class="min-h-screen flex items-center justify-center p-6 bg-gray-50">
         <div class="bg-white rounded-xl border p-6 max-w-sm w-full text-center">
           <div class="text-4xl mb-3">&#9888;</div>
           <h1 class="text-lg font-semibold text-gray-900 mb-2">Invalid Verification Link</h1>
-          <p class="text-sm text-gray-600">This QR code does not contain valid prescription data.</p>
+          <p class="text-sm text-gray-600">
+            {id
+              ? 'No prescription matches this code.'
+              : 'This QR code does not contain valid prescription data.'}
+          </p>
         </div>
       </div>
     );
@@ -33,7 +83,7 @@ export function Verify({ data }: VerifyProps) {
     <div class="min-h-screen flex items-center justify-center p-6 bg-gray-50">
       <div class="bg-white rounded-xl border p-6 max-w-sm w-full">
         <div class="text-center mb-4">
-          <div class="text-4xl mb-2">{isCancelled ? '\uD83D\uDEAB' : '\u2705'}</div>
+          <div class="text-4xl mb-2">{isCancelled ? '🚫' : '✅'}</div>
           <h1 class="text-lg font-semibold text-gray-900">
             {isCancelled ? 'Cancelled Prescription' : 'Valid Prescription'}
           </h1>

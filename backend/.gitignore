@@ -1,0 +1,5 @@
+# PocketBase runtime data (SQLite DB, uploaded files, auto-generated types)
+pb_data/
+pb_migrations/
+pocketbase
+*.zip

@@ -9,10 +9,11 @@ import {
   getProfile,
   getConfig,
   saveConfig,
-} from '../lib/db';
+} from '../lib/store';
 import { generatePrescriptionPDF } from '../lib/pdf';
 import { signPrescription, generateQRCode } from '../lib/qr';
-import { parsePrescriptionUpdate, type AIProvider } from '../lib/gemini';
+import { parsePrescriptionUpdate, parsePrescriptionViaServer, type AIProvider } from '../lib/gemini';
+import { pocketBaseEnabled, isAuthed } from '../lib/pb';
 import type { Prescription, PrescriptionDraft } from '../schemas/prescription';
 import type { DoctorProfile } from '../schemas/profile';
 
@@ -184,7 +185,8 @@ export function NewRx({ editDraft: _editDraft }: Props) {
     // Add user message
     setMessages(prev => [...prev, { id: ++msgId, role: 'user', text }]);
 
-    if (!apiKey) {
+    const cloudAI = pocketBaseEnabled && isAuthed();
+    if (!cloudAI && !apiKey) {
       setMessages(prev => [...prev, { id: ++msgId, role: 'ai', text: '⚠️ API key not configured. Go to Settings first.' }]);
       return;
     }
@@ -200,7 +202,9 @@ export function NewRx({ editDraft: _editDraft }: Props) {
 
     try {
       const currentDraft = (draft.patient?.name || draft.medicines.length > 0) ? draft : null;
-      const result = await parsePrescriptionUpdate(provider, apiKey, currentDraft, { type: 'text', text });
+      const result = cloudAI
+        ? await parsePrescriptionViaServer(currentDraft, { type: 'text', text })
+        : await parsePrescriptionUpdate(provider, apiKey, currentDraft, { type: 'text', text });
 
       // Merge result into draft
       const newDraft: PrescriptionDraft = mergeDraft(draft, result);
@@ -257,7 +261,7 @@ export function NewRx({ editDraft: _editDraft }: Props) {
 
       const qrPayload = await signPrescription(rx, profile);
       rx.qrPayload = qrPayload;
-      const qrDataUrl = await generateQRCode(qrPayload);
+      const qrDataUrl = await generateQRCode(qrPayload, rx.id);
       const blob = await generatePrescriptionPDF(rx, profile, qrDataUrl);
       rx.pdfBlob = blob;
 
