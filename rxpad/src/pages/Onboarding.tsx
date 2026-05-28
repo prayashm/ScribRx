@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
-import { saveProfile, saveConfig, getConfig } from '../lib/db';
+import { saveProfile, saveConfig, getConfig, getProfile } from '../lib/store';
 import { generateStamp } from '../lib/stamp';
 import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
@@ -8,6 +8,7 @@ import { testApiKey, type AIProvider } from '../lib/gemini';
 import { startOAuthFlow, testOpenRouterKey } from '../lib/openrouter';
 import { StampPreview } from '../components/StampPreview';
 import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
+import { pocketBaseEnabled } from '../lib/pb';
 import type { DoctorProfile } from '../schemas/profile';
 import type { SignatureFont, SignatureStyle } from '../lib/signature';
 
@@ -121,7 +122,6 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
 
   async function handleSignatureSave() {
     setSavingSignature(true);
-    const { getProfile } = await import('../lib/db');
     const existing = await getProfile();
     if (existing) {
       existing.signatureFont = signatureFont;
@@ -157,7 +157,7 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
               Generate professional prescriptions from voice notes in under 90 seconds.
             </p>
             <button
-              onClick={() => setStep(1)}
+              onClick={() => setStep(pocketBaseEnabled ? 2 : 1)}
               class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-base"
             >
               Get Started
@@ -309,7 +309,7 @@ export function Onboarding({ path: _path, onComplete }: { path?: string; onCompl
               />
             </div>
             <div class="flex gap-3 mt-4">
-              <button onClick={() => setStep(1)} class="flex-1 text-gray-600 py-2.5 rounded-lg text-sm">
+              <button onClick={() => setStep(pocketBaseEnabled ? 0 : 1)} class="flex-1 text-gray-600 py-2.5 rounded-lg text-sm">
                 Back
               </button>
               <button

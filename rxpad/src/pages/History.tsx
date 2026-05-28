@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { Shell } from '../components/Shell';
 import { PrescriptionCard } from '../components/PrescriptionCard';
 import { PrescriptionView } from '../components/PrescriptionView';
-import { listPrescriptions, savePrescription, getProfile } from '../lib/db';
+import { listPrescriptions, savePrescription, getProfile, ensurePdfBlob } from '../lib/store';
 import { generatePrescriptionPDF } from '../lib/pdf';
 import { signPrescription, generateQRCode } from '../lib/qr';
 import type { Prescription } from '../schemas/prescription';
@@ -34,7 +34,7 @@ export function History({ path: _path }: { path?: string }) {
     // Re-sign and regenerate PDF with CANCELLED watermark
     const qrPayload = await signPrescription(updated, profile);
     updated.qrPayload = qrPayload;
-    const qrDataUrl = await generateQRCode(qrPayload);
+    const qrDataUrl = await generateQRCode(qrPayload, updated.id);
     const blob = await generatePrescriptionPDF(updated, profile, qrDataUrl);
     updated.pdfBlob = blob;
 
@@ -44,6 +44,8 @@ export function History({ path: _path }: { path?: string }) {
   }
 
   async function handleShare(rx: Prescription) {
+    // Synced-from-another-device records carry only a pdfUrl until fetched.
+    if (!rx.pdfBlob) rx = await ensurePdfBlob(rx);
     if (!rx.pdfBlob) return;
     const file = new File([rx.pdfBlob], `${rx.id}.pdf`, { type: 'application/pdf' });
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
