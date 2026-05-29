@@ -61,7 +61,7 @@ export async function saveProfile(profile: DoctorProfile): Promise<void> {
   for (const f of PROFILE_FIELDS) data[f as string] = (profile as Record<string, unknown>)[f as string] ?? '';
 
   const existing = await pb.collection('profiles')
-    .getFirstListItem(`user="${userId}"`)
+    .getFirstListItem(pb.filter('user = {:userId}', { userId }))
     .catch(() => null);
 
   if (existing) {
@@ -75,7 +75,7 @@ export async function getProfile(): Promise<DoctorProfile | null> {
   if (useCloud()) {
     try {
       const userId = pb.authStore.record?.id;
-      const rec = await pb.collection('profiles').getFirstListItem(`user="${userId}"`);
+      const rec = await pb.collection('profiles').getFirstListItem(pb.filter('user = {:userId}', { userId }));
       const profile = recordToProfile(rec as unknown as Record<string, unknown>);
       await local.saveProfile(profile); // refresh cache
       return profile;
@@ -97,7 +97,9 @@ const STRUCTURED_KEYS = [
 
 async function prescriptionToFormData(rx: Prescription): Promise<FormData> {
   const userId = pb.authStore.record?.id ?? '';
-  const profile = await local.getProfile();
+  // Cloud-first: on a fresh device the local cache may be empty even though the
+  // profile exists remotely, which would blank out the verification fields.
+  const profile = await getProfile();
 
   const data: Record<string, unknown> = {};
   const rxRecord = rx as unknown as Record<string, unknown>;
@@ -150,7 +152,7 @@ export async function savePrescription(rx: Prescription): Promise<void> {
 
   const fd = await prescriptionToFormData(rx);
   const existing = await pb.collection('prescriptions')
-    .getFirstListItem(`rxId="${rx.id}"`)
+    .getFirstListItem(pb.filter('rxId = {:rxId}', { rxId: rx.id }))
     .catch(() => null);
 
   if (existing) {
@@ -163,7 +165,7 @@ export async function savePrescription(rx: Prescription): Promise<void> {
 export async function getPrescription(id: string): Promise<Prescription | null> {
   if (useCloud()) {
     try {
-      const rec = await pb.collection('prescriptions').getFirstListItem(`rxId="${id}"`);
+      const rec = await pb.collection('prescriptions').getFirstListItem(pb.filter('rxId = {:rxId}', { rxId: id }));
       const rx = recordToPrescription(rec as unknown as Record<string, any>);
       const cached = await local.getPrescription(id);
       if (cached?.pdfBlob) rx.pdfBlob = cached.pdfBlob;
@@ -209,7 +211,9 @@ export async function ensurePdfBlob(rx: Prescription): Promise<Prescription> {
     try {
       const res = await fetch(rx.pdfUrl);
       const blob = await res.blob();
-      return { ...rx, pdfBlob: blob };
+      const updated = { ...rx, pdfBlob: blob };
+      await local.savePrescription(updated); // cache so re-shares stay offline-first
+      return updated;
     } catch {
       // ignore — caller handles missing blob
     }
@@ -223,15 +227,16 @@ export async function getNextRxId(): Promise<string> {
 
   if (useCloud()) {
     try {
-      // Find the highest counter already used today for this doctor.
-      const recs = await pb.collection('prescriptions').getFullList({
-        filter: `rxId~"RX-${dateStr}-"`,
-        fields: 'rxId',
-      });
+      // Fetch only the latest counter used today (zero-padded, so -rxId sorts
+      // it to the top) instead of pulling the whole day's list.
+      const latest = await pb.collection('prescriptions').getFirstListItem(
+        pb.filter('rxId ~ {:prefix}', { prefix: `RX-${dateStr}-` }),
+        { sort: '-rxId', fields: 'rxId' }
+      ).catch(() => null);
       let max = 0;
-      for (const r of recs) {
-        const m = /-(\d+)$/.exec((r as any).rxId ?? '');
-        if (m) max = Math.max(max, Number(m[1]));
+      if (latest) {
+        const m = /-(\d+)$/.exec((latest as any).rxId ?? '');
+        if (m) max = Number(m[1]);
       }
       return `RX-${dateStr}-${String(max + 1).padStart(4, '0')}`;
     } catch {
