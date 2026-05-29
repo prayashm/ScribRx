@@ -19,8 +19,9 @@ RUN ARCH="$(uname -m)" && \
     unzip /tmp/pb.zip -d /pb && \
     rm /tmp/pb.zip
 
-# Bundle the custom hooks. Collections are imported via the Admin UI or migrations.
+# Bundle the custom hooks and collection migrations.
 COPY pb_hooks /pb/pb_hooks
+COPY migrations /pb/pb_migrations
 
 EXPOSE 8090
 

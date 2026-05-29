@@ -36,7 +36,15 @@ fly deploy
 
 Then point the frontend at it: in `rxpad/.env`, `VITE_PB_URL=https://<your-host>`.
 
-## 2. Create collections (Admin UI → Collections → New)
+## 2. Collections
+
+The `migrations/` directory contains a migration that creates the `profiles` and
+`prescriptions` collections (with owner-scoped API rules) automatically — the
+Dockerfile copies it to `pb_data/../pb_migrations` and PocketBase applies it on
+first start. You normally don't need to create anything by hand.
+
+The reference below documents what that migration sets up, in case you'd rather
+build the collections manually in the Admin UI (Collections → New).
 
 ### `profiles` (Base)
 One record per user.
