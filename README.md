@@ -55,6 +55,17 @@ npm run preview
 
 Deploy the `dist/` folder to any static host (Cloudflare Pages, Vercel, Netlify).
 
+## Optional cloud backend (PocketBase)
+
+ScribRx runs fully on-device by default. An **optional** PocketBase backend adds
+accounts, cross-device sync, a server-side AI proxy (so doctors don't bring their
+own key), and hosted QR verification. It activates only when you set
+`VITE_PB_URL` (see `rxpad/.env.example`); leave it empty to keep the original
+zero-backend behaviour. Setup lives in [`backend/README.md`](backend/README.md).
+
+> Enabling it stores patient data on a server — review the compliance notes in
+> the backend README before going live.
+
 ## Project Structure
 
 ```

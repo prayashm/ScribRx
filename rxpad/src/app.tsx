@@ -1,16 +1,21 @@
 import { useState, useEffect, useErrorBoundary } from 'preact/hooks';
 import Router from 'preact-router';
-import { getProfile, getConfig } from './lib/db';
+import { getProfile, getConfig } from './lib/store';
+import { pocketBaseEnabled, isAuthed, onAuthChange } from './lib/pb';
 import { NewRx } from './pages/NewRx';
 import { History } from './pages/History';
 import { Settings } from './pages/Settings';
 import { Onboarding } from './pages/Onboarding';
+import { Login } from './pages/Login';
 import { Verify } from './pages/Verify';
 import { AuthCallback } from './pages/AuthCallback';
 import type { AIProvider } from './lib/gemini';
 
+const PUBLIC_PATHS = ['/verify', '/auth/callback'];
+
 export function App() {
   const [ready, setReady] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showUpdate, setShowUpdate] = useState(false);
@@ -18,6 +23,7 @@ export function App() {
 
   useEffect(() => {
     checkSetup();
+    const unsubscribeAuth = pocketBaseEnabled ? onAuthChange(() => checkSetup()) : undefined;
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
@@ -31,12 +37,22 @@ export function App() {
     }
 
     return () => {
+      unsubscribeAuth?.();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
   async function checkSetup() {
+    // Cloud mode: require a signed-in account before anything else.
+    if (pocketBaseEnabled && !isAuthed()) {
+      setNeedsAuth(true);
+      setNeedsOnboarding(false);
+      setReady(true);
+      return;
+    }
+    setNeedsAuth(false);
+
     const [profile, provider, geminiKey, openrouterKey] = await Promise.all([
       getProfile(),
       getConfig<AIProvider>('aiProvider'),
@@ -44,10 +60,15 @@ export function App() {
       getConfig<string>('openrouterApiKey'),
     ]);
 
+    // In cloud mode the server holds the AI key, so only a profile is required.
+    // In local mode the doctor must also have configured a BYOK key.
     const selectedProvider = provider || 'gemini';
     const activeKey = selectedProvider === 'openrouter' ? openrouterKey : geminiKey;
-    if (!profile || !activeKey) {
+    const needsKey = !pocketBaseEnabled && !activeKey;
+    if (!profile || needsKey) {
       setNeedsOnboarding(true);
+    } else {
+      setNeedsOnboarding(false);
     }
     setReady(true);
   }
@@ -80,7 +101,13 @@ export function App() {
     );
   }
 
-  if (needsOnboarding && window.location.pathname !== '/verify' && window.location.pathname !== '/auth/callback') {
+  const isPublicPath = PUBLIC_PATHS.includes(window.location.pathname);
+
+  if (needsAuth && !isPublicPath) {
+    return <Login onAuthed={() => checkSetup()} />;
+  }
+
+  if (needsOnboarding && !isPublicPath) {
     return <Onboarding onComplete={() => setNeedsOnboarding(false)} />;
   }
 
