@@ -3,6 +3,11 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { PrescriptionDraftSchema } from '../schemas/prescription';
 import type { PrescriptionDraft } from '../schemas/prescription';
+import { pb } from './pb';
+
+export type ParseInput =
+  | { type: 'audio'; data: string; mimeType: string }
+  | { type: 'text'; text: string };
 
 export type AIProvider = 'gemini' | 'openrouter';
 
@@ -187,6 +192,27 @@ export async function parsePrescriptionUpdate(
     messages: [{ role: 'user', content: userContent as any }],
   });
 
+  const sanitized = sanitizeDraft(object);
+  if (input.type === 'text') {
+    return applyDemographicHeuristic(sanitized, input.text);
+  }
+  return sanitized;
+}
+
+/**
+ * Cloud path: parse via the PocketBase `/api/parse-rx` hook, which calls Gemini
+ * server-side using a key the client never sees. The same sanitisation and
+ * demographic heuristics as the BYOK path are applied to the response.
+ */
+export async function parsePrescriptionViaServer(
+  currentState: PrescriptionDraft | null,
+  input: ParseInput
+): Promise<PrescriptionDraft> {
+  const res = await pb.send('/api/parse-rx', {
+    method: 'POST',
+    body: { currentState, input },
+  });
+  const object = PrescriptionDraftSchema.parse((res as any)?.draft ?? res);
   const sanitized = sanitizeDraft(object);
   if (input.type === 'text') {
     return applyDemographicHeuristic(sanitized, input.text);
