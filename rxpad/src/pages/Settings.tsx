@@ -4,7 +4,8 @@ import { Shell } from '../components/Shell';
 import { StampPreview } from '../components/StampPreview';
 import { SignaturePreview, SignatureSelector } from '../components/SignaturePreview';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { saveProfile, getProfile, saveConfig, getConfig, resetDB } from '../lib/db';
+import { saveProfile, getProfile, saveConfig, getConfig, resetDB } from '../lib/store';
+import { pocketBaseEnabled, pb, logout } from '../lib/pb';
 import { generateStamp } from '../lib/stamp';
 import { generateSignature } from '../lib/signature';
 import { generateHmacSecret } from '../lib/qr';
@@ -161,7 +162,22 @@ export function Settings({ path: _path }: { path?: string }) {
           </span>
         </div>
 
-        {/* AI Provider Section */}
+        {/* Account Section (cloud mode only) */}
+        {pocketBaseEnabled && (
+          <section class="bg-white rounded-xl border p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-1">Account</h2>
+            <p class="text-sm text-gray-600 mb-3">{pb.authStore.record?.email}</p>
+            <button
+              onClick={() => { logout(); window.location.href = '/'; }}
+              class="w-full bg-white text-gray-700 border border-gray-300 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+            >
+              Sign Out
+            </button>
+          </section>
+        )}
+
+        {/* AI Provider Section — hidden in cloud mode, where the server holds the key */}
+        {!pocketBaseEnabled && (
         <section class="bg-white rounded-xl border p-4 mb-4">
           <h2 class="font-semibold text-gray-800 mb-3">AI Provider</h2>
 
@@ -258,6 +274,7 @@ export function Settings({ path: _path }: { path?: string }) {
 
           {providerError && <p class="mt-2 text-sm text-red-600">{providerError}</p>}
         </section>
+        )}
 
         <section class="bg-white rounded-xl border p-4">
           <h2 class="font-semibold text-gray-800 mb-3">Doctor Profile</h2>
@@ -392,7 +409,8 @@ export function Settings({ path: _path }: { path?: string }) {
             destructive
             onConfirm={async () => {
               await resetDB();
-              window.location.href = '/onboarding';
+              if (pocketBaseEnabled) logout(); // clears the local session; cloud data is unaffected
+              window.location.href = pocketBaseEnabled ? '/' : '/onboarding';
             }}
             onCancel={() => setShowResetConfirm(false)}
           />

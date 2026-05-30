@@ -1,0 +1,28 @@
+# Fly.io deployment for the ScribRx PocketBase backend.
+# Edit `app` and `primary_region`, then: fly launch --no-deploy && fly deploy
+app = "scribrx-pb"
+primary_region = "bom"  # Mumbai — keep patient data in-region (DPDP)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Set the AI key as a secret instead of here:  fly secrets set GEMINI_API_KEY=...
+
+[http_service]
+  internal_port = 8090
+  force_https = true
+  auto_stop_machines = false  # keep PocketBase always-on (it holds local SQLite)
+  auto_start_machines = true
+  min_machines_running = 1
+
+# Persistent volume for pb_data (SQLite + uploaded files when not using R2).
+# Create with:  fly volumes create pb_data --region bom --size 1
+[mounts]
+  source = "pb_data"
+  destination = "/pb/pb_data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
