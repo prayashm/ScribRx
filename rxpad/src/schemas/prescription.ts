@@ -85,5 +85,7 @@ export interface Prescription {
   labTests: string[];
   notes?: string;
   pdfBlob?: Blob;
+  /** Remote URL of the stored PDF when synced via PocketBase (lazy-loaded into pdfBlob). */
+  pdfUrl?: string;
   qrPayload?: string;
 }
